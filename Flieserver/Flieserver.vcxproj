@@ -30,7 +30,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -183,6 +183,9 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CDispalyView.h" />
+    <ClInclude Include="CFileView.h" />
+    <ClInclude Include="CLogin.h" />
     <ClInclude Include="Flieserver.h" />
     <ClInclude Include="FlieserverDoc.h" />
     <ClInclude Include="FlieserverView.h" />
@@ -193,6 +196,9 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CDispalyView.cpp" />
+    <ClCompile Include="CFileView.cpp" />
+    <ClCompile Include="CLogin.cpp" />
     <ClCompile Include="Flieserver.cpp" />
     <ClCompile Include="FlieserverDoc.cpp" />
     <ClCompile Include="FlieserverView.cpp" />

@@ -17,7 +17,7 @@ public:
 
 // 操作
 public:
-
+	void BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl);
 // 重写
 public:
 	virtual BOOL OnNewDocument();

@@ -14,6 +14,8 @@
 
 #include <propkey.h>
 
+//using namespace std;
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -31,11 +33,60 @@ END_MESSAGE_MAP()
 CFlieserverDoc::CFlieserverDoc() noexcept
 {
 	// TODO: 在此添加一次性构造代码
-
+	//CFlieserverDoc::BroseAllFiles("..\\m_filepath");
+	SetTitle(TEXT("fileserver"));
 }
 
 CFlieserverDoc::~CFlieserverDoc()
 {
+}
+
+void CFlieserverDoc::BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl)
+{
+	//检测路径是否正确并添加必要信息
+	if (filepath == _T(""))
+	{
+		return;
+	}
+	else
+	{
+		if (filepath.Right(1) != _T(""))
+		{
+			filepath += _T("\\");
+		}
+		filepath += _T("*.*");
+	}
+
+	//递归枚举文件夹下的内容
+	CFileFind find;
+	CString strpath;
+	CString str_fileName;
+	BOOL IsFind = find.FindFile(filepath);
+	CTreeCtrl* m_TreeCtrl = treeCtrl;
+	while (IsFind)
+	{
+		IsFind = find.FindNextFile();
+		strpath = find.GetFilePath();
+
+		if (!find.IsDirectory() && !find.IsDots())
+		{
+			str_fileName = find.GetFileName();
+			m_TreeCtrl->InsertItem((LPCSTR)str_fileName);
+			//AfxMessageBox(str_fileName);
+		}
+		else if (find.IsDirectory() && !find.IsDots())
+		{
+			str_fileName = find.GetFileName();
+			m_TreeCtrl->InsertItem((LPCSTR)str_fileName);
+			//AfxMessageBox(str_fileName);
+
+			BrowseAllFiles(strpath, m_TreeCtrl);
+		}
+		else
+		{
+			continue;
+		}
+	}
 }
 
 BOOL CFlieserverDoc::OnNewDocument()

@@ -10,7 +10,6 @@
 #include "Flieserver.h"
 #endif
 
-#include "FlieserverDoc.h"
 #include "FlieserverView.h"
 
 #ifdef _DEBUG
