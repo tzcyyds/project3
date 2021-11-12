@@ -183,6 +183,8 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CDispalyView.h" />
+    <ClInclude Include="CFileView.h" />
     <ClInclude Include="Client.h" />
     <ClInclude Include="ClientDoc.h" />
     <ClInclude Include="ClientView.h" />
@@ -193,6 +195,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CDispalyView.cpp" />
+    <ClCompile Include="CFileView.cpp" />
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="ClientDoc.cpp" />
     <ClCompile Include="ClientView.cpp" />

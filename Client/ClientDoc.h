@@ -30,6 +30,7 @@ public:
 // 实现
 public:
 	virtual ~CClientDoc();
+	void BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl);
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;

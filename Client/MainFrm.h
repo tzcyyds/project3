@@ -10,6 +10,7 @@ class CMainFrame : public CFrameWnd
 protected: // 仅从序列化创建
 	CMainFrame() noexcept;
 	DECLARE_DYNCREATE(CMainFrame)
+	CSplitterWnd m_wndSplitter;
 
 // 特性
 public:
@@ -20,7 +21,7 @@ public:
 // 重写
 public:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-
+	virtual BOOL OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext);
 // 实现
 public:
 	virtual ~CMainFrame();
