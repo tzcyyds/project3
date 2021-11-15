@@ -25,7 +25,6 @@ public:
 	virtual BOOL InitInstance();
 
 // 实现
-	afx_msg void OnAppAbout();
 	DECLARE_MESSAGE_MAP()
 };
 

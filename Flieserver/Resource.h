@@ -2,7 +2,6 @@
 // Microsoft Visual C++ 生成的包含文件。
 // 供 Flieserver.rc 使用
 //
-#define IDD_ABOUTBOX                    100
 #define IDP_SOCKETS_INIT_FAILED         104
 #define IDR_MAINFRAME                   128
 #define IDR_FlieserverTYPE              130
