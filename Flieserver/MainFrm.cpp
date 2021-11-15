@@ -9,7 +9,7 @@
 #include "MainFrm.h"
 
 #include "CFileView.h"
-#include "CDispalyView.h"
+#include "CDisplayView.h"
 
 #include "shlwapi.h"
 #pragma comment(lib,"shlwapi.lib")
@@ -77,8 +77,8 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 {
 	m_wndSplitter.CreateStatic(this, 1, 2);
 
-	m_wndSplitter.CreateView(0, 0, RUNTIME_CLASS(CFileView), CSize(600, 500), pContext);
-	m_wndSplitter.CreateView(0, 1, RUNTIME_CLASS(CDispalyView), CSize(600, 500), pContext);
+	m_wndSplitter.CreateView(0, 0, RUNTIME_CLASS(CFileView), CSize(300, 500), pContext);
+	m_wndSplitter.CreateView(0, 1, RUNTIME_CLASS(CDisplayView), CSize(600, 500), pContext);
 
 	return TRUE;
 }

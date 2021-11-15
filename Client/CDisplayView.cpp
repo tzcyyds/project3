@@ -3,42 +3,42 @@
 
 #include "pch.h"
 #include "Client.h"
-#include "CDispalyView.h"
+#include "CDisplayView.h"
 
 
 // CDispalyView
 
-IMPLEMENT_DYNCREATE(CDispalyView, CFormView)
+IMPLEMENT_DYNCREATE(CDisplayView, CFormView)
 
-CDispalyView::CDispalyView()
+CDisplayView::CDisplayView()
 	: CFormView(IDD_DISPLAYVIEW)
 {
 
 }
 
-CDispalyView::~CDispalyView()
+CDisplayView::~CDisplayView()
 {
 }
 
-void CDispalyView::DoDataExchange(CDataExchange* pDX)
+void CDisplayView::DoDataExchange(CDataExchange* pDX)
 {
 	CFormView::DoDataExchange(pDX);
 }
 
-BEGIN_MESSAGE_MAP(CDispalyView, CFormView)
+BEGIN_MESSAGE_MAP(CDisplayView, CFormView)
 END_MESSAGE_MAP()
 
 
 // CDispalyView 诊断
 
 #ifdef _DEBUG
-void CDispalyView::AssertValid() const
+void CDisplayView::AssertValid() const
 {
 	CFormView::AssertValid();
 }
 
 #ifndef _WIN32_WCE
-void CDispalyView::Dump(CDumpContext& dc) const
+void CDisplayView::Dump(CDumpContext& dc) const
 {
 	CFormView::Dump(dc);
 }

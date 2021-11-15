@@ -10,7 +10,7 @@
 #include "MainFrm.h"
 
 #include "ClientDoc.h"
-#include "ClientView.h"
+#include "CDisplayView.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -90,7 +90,7 @@ BOOL CClientApp::InitInstance()
 		IDR_MAINFRAME,
 		RUNTIME_CLASS(CClientDoc),
 		RUNTIME_CLASS(CMainFrame),       // 主 SDI 框架窗口
-		RUNTIME_CLASS(CClientView));
+		RUNTIME_CLASS(CDisplayView));
 	if (!pDocTemplate)
 		return FALSE;
 	AddDocTemplate(pDocTemplate);

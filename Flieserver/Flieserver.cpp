@@ -8,7 +8,7 @@
 #include "afxdialogex.h"
 #include "Flieserver.h"
 #include "MainFrm.h"
-#include "CLogin.h"
+
 #include "FlieserverDoc.h"
 #include "FlieserverView.h"
 
@@ -35,7 +35,6 @@ CFlieserverApp::CFlieserverApp() noexcept
 	// TODO: 将以下应用程序 ID 字符串替换为唯一的 ID 字符串；建议的字符串格式
 	//为 CompanyName.ProductName.SubProduct.VersionInformation
 	SetAppID(_T("Flieserver.AppID.NoVersion"));
-	m_hash = 0;
 	// TODO:  在此处添加构造代码，
 	// 将所有重要的初始化放置在 InitInstance 中
 }
@@ -82,15 +81,6 @@ BOOL CFlieserverApp::InitInstance()
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 	LoadStdProfileSettings(4);  // 加载标准 INI 文件选项(包括 MRU)
 
-	CLogin m_login;
-	if (m_login.DoModal() == IDOK)
-	{
-
-	}
-	else
-	{
-		::PostQuitMessage(0);
-	}
 
 	// 注册应用程序的文档模板。  文档模板
 	// 将用作文档、框架窗口和视图之间的连接
@@ -167,12 +157,3 @@ void CFlieserverApp::OnAppAbout()
 
 // CFlieserverApp 消息处理程序
 
-
-
-
-
-bool CFlieserverApp::mSet_hash(UINT x)
-{
-	m_hash = x;
-	return true;
-}

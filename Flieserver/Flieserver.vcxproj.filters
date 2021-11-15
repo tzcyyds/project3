@@ -39,13 +39,10 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="CDispalyView.h">
+    <ClInclude Include="CDisplayView.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CFileView.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="CLogin.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -65,13 +62,10 @@
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="CDispalyView.cpp">
+    <ClCompile Include="CDisplayView.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CFileView.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="CLogin.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

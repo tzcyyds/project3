@@ -4,13 +4,13 @@
 
 // CDispalyView 窗体视图
 
-class CDispalyView : public CFormView
+class CDisplayView : public CFormView
 {
-	DECLARE_DYNCREATE(CDispalyView)
+	DECLARE_DYNCREATE(CDisplayView)
 
 protected:
-	CDispalyView();           // 动态创建所使用的受保护的构造函数
-	virtual ~CDispalyView();
+	CDisplayView();           // 动态创建所使用的受保护的构造函数
+	virtual ~CDisplayView();
 
 public:
 #ifdef AFX_DESIGN_TIME

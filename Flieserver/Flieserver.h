@@ -27,10 +27,10 @@ public:
 // 实现
 	afx_msg void OnAppAbout();
 	DECLARE_MESSAGE_MAP()
-private:
+/*private:
 	UINT m_hash;
 public:
-	bool mSet_hash(UINT x);
+	bool mSet_hash(UINT x);*/
 };
 
 extern CFlieserverApp theApp;
