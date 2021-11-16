@@ -27,8 +27,17 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 	DECLARE_MESSAGE_MAP()
+
 public:
 	afx_msg void OnBnClickedButton1();
+	afx_msg void OnBnClickedButton2();
+	virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+	virtual void OnInitialUpdate();
+
+protected:
+	SOCKET hCommSock;
+	SOCKADDR_IN clntAdr;
+	int clntAdrLen;
 };
 
 

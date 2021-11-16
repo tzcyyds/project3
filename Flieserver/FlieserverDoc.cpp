@@ -14,7 +14,7 @@
 
 #include <propkey.h>
 
-//using namespace std;
+using namespace std;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -35,6 +35,10 @@ CFlieserverDoc::CFlieserverDoc() noexcept
 	// TODO: 在此添加一次性构造代码
 	//CFlieserverDoc::BroseAllFiles("..\\m_filepath");
 	SetTitle(TEXT("fileserver"));
+	m_UserInfo.initDoc();//本地用户信息
+	m_UserWait.myMap.clear();//等待回应
+	m_UserOL.myMap.clear();//授权后，正式在线
+
 }
 
 CFlieserverDoc::~CFlieserverDoc()

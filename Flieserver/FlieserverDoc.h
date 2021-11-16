@@ -4,7 +4,7 @@
 
 
 #pragma once
-
+#include "MyUser.h"
 
 class CFlieserverDoc : public CDocument
 {
@@ -18,6 +18,7 @@ public:
 // 操作
 public:
 	void BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl);
+
 // 重写
 public:
 	virtual BOOL OnNewDocument();
@@ -35,8 +36,12 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 
-protected:
-
+public:
+	UserDoc m_UserInfo;//本地用户信息
+	//UserList m_UserOL;//还未质询
+	UserList m_UserWait;//等待回应
+	//UserList m_UserOL;//授权之前
+	UserList m_UserOL;//授权后，正式在线
 // 生成的消息映射函数
 protected:
 	DECLARE_MESSAGE_MAP()
@@ -46,3 +51,4 @@ protected:
 	void SetSearchContent(const CString& value);
 #endif // SHARED_HANDLERS
 };
+
