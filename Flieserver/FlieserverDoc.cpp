@@ -36,7 +36,8 @@ CFlieserverDoc::CFlieserverDoc() noexcept
 	//CFlieserverDoc::BroseAllFiles("..\\m_filepath");
 	SetTitle(TEXT("fileserver"));
 	m_UserInfo.initDoc();//本地用户信息
-	m_UserWait.myMap.clear();//等待回应
+	m_WaitAcc.myMap.clear();//等待回应
+	m_WaitAns.myMap.clear();//等待回应
 	m_UserOL.myMap.clear();//授权后，正式在线
 
 }
@@ -91,6 +92,14 @@ void CFlieserverDoc::BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl)
 			continue;
 		}
 	}
+}
+
+void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int strlen)
+{
+}
+
+void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen)
+{
 }
 
 BOOL CFlieserverDoc::OnNewDocument()

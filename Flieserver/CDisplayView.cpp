@@ -137,24 +137,61 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				closesocket(hSocket);
 				break;
 			}
-			//连接成功后，立即发送质询消息
 			
-			pDoc->m_UserWait.myMap.insert(pair<SOCKET, string>(hCommSock, "test"));
+			//hCommSock进入连接建立状态
+			pDoc->m_WaitAcc.myMap.insert(pair<SOCKET, string>(hCommSock, "test"));
 
 			break;
 		case FD_READ:
 			//strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
 			//if (strLen <= 0);
 			//else;
-			
-			//下面要做数据的分类处理，chap认证数据，文件传输命令，or日常聊天数据。报文格式要设计好
-			if (pDoc->m_UserOL.myMap.count(hSocket))//如果认证已通过，就处理消息
+			//首先判断hSocket是否通过认证
+			if (pDoc->m_UserOL.myMap.count(hSocket))//如果认证已通过，就处理普通消息
 			{
+				//做数据分类，如果是传文件命令，就传，否则就当普通字符串。
 
 			}
 			else//如果还未通过，就只能接收认证报文
 			{
+				strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
+				if (strLen <= 0) 
+				{
 
+				}
+				
+				//继续数据的分类处理，非chap认证数据一律丢弃
+				
+				//提取事件,事件赋值。
+				int event = 1;
+				//设定状态
+				int state = 0;
+				if (pDoc->m_WaitAcc.myMap.count(hSocket))
+				{
+					state = 1;//已连接，正在等待用户名
+				}
+				else if (pDoc->m_WaitAns.myMap.count(hSocket))
+				{
+					state = 2;//用户名存在，正在认证密码，等待回应
+				}
+				else
+				{
+					state = 0;//质询出错，准备关闭连接
+				}
+				//switch 根据状态
+				switch (state)
+				{
+				case 1://等待用户名，并发送质询
+					pDoc->fsm_Challenge(hSocket,event,buf,strLen);
+					break;
+				case 2://等待质询结果
+					pDoc->fsm_HandleRes(hSocket, event, buf, strLen);
+					break;
+				default:
+					break;
+				}
+//连接建立状态，调函数，传hSocket，事件号，报文。函数：拿到用户名，查用户名对应的密码，随机出随机数，和密钥异或，存起来，然后发送随机数。最后，更改状态
+//等待质询结果状态，调函数，传参。函数：提取有用信息，把信息和存的值比较，如果正确，返回认证结果，更改状态，用户在线。如果错误，就...
 			}
 			break;
 		case FD_CLOSE:

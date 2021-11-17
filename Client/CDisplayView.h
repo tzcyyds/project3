@@ -27,6 +27,12 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 	DECLARE_MESSAGE_MAP()
+	virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
+public:
+	CString m_user;
+	CString m_password;
+	afx_msg void OnBnClickedButton1();
+	afx_msg void OnBnClickedButton2();
 };
 
 

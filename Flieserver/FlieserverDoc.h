@@ -18,7 +18,8 @@ public:
 // 操作
 public:
 	void BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl);
-
+	void fsm_Challenge(SOCKET hSocket,int event,char* buf, int strlen);
+	void fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen);
 // 重写
 public:
 	virtual BOOL OnNewDocument();
@@ -38,10 +39,10 @@ public:
 
 public:
 	UserDoc m_UserInfo;//本地用户信息
-	//UserList m_UserOL;//还未质询
-	UserList m_UserWait;//等待回应
-	//UserList m_UserOL;//授权之前
+	UserList m_WaitAcc;//等待用户名
+	UserList m_WaitAns;//等待质询的回应
 	UserList m_UserOL;//授权后，正式在线
+	UserList m_Sendrand;//保存已经发送的质询随机数，socket-string数据形式
 // 生成的消息映射函数
 protected:
 	DECLARE_MESSAGE_MAP()
