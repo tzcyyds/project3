@@ -9,7 +9,7 @@
 
 
 #define WM_SOCK WM_USER + 100// 自定义消息，为避免冲突，最好100以上
-#define MAX_BUF_SIZE 128
+constexpr auto MAX_BUF_SIZE = 128;
 
 // CDispalyView
 
