@@ -59,11 +59,11 @@ BOOL CFlieserverApp::InitInstance()
 
 	CWinApp::InitInstance();
 
-	if (!AfxSocketInit())
-	{
-		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
-		return FALSE;
-	}
+	//if (!AfxSocketInit())
+	//{
+	//	AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
+	//	return FALSE;
+	//}
 
 	EnableTaskbarInteraction(FALSE);
 

@@ -69,9 +69,9 @@ void CDisplayView::OnInitialUpdate()
 void CDisplayView::OnBnClickedButton1()//启动
 {
 
-/*	clntAdr.sin_family = AF_INET;
-	clntAdr.sin_addr.s_addr = htonl(0x7f000001);
-	clntAdr.sin_port = htons(9191);*/
+	//clntAdr.sin_family = AF_INET;
+	//clntAdr.sin_addr.s_addr = htonl(0x7f000001);
+	//clntAdr.sin_port = htons(9191);
 
 	WSADATA wsaData;
 	SOCKADDR_IN servAdr;
@@ -143,10 +143,10 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 			break;
 		case FD_READ:
-			/*strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
-			if (strLen <= 0);
-			else;
-			*/
+			//strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
+			//if (strLen <= 0);
+			//else;
+			
 			//下面要做数据的分类处理，chap认证数据，文件传输命令，or日常聊天数据。报文格式要设计好
 			if (pDoc->m_UserOL.myMap.count(hSocket))//如果认证已通过，就处理消息
 			{

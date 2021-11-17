@@ -28,7 +28,7 @@
 #include <afxcontrolbars.h>     // MFC 支持功能区和控制条
 
 
-#include <afxsock.h>            // MFC 套接字扩展
+//#include <afxsock.h>            // MFC 套接字扩展
 
 
 
