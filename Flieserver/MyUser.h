@@ -3,6 +3,14 @@
 
 using namespace std;
 
+struct myUser
+{
+	//SOCKET s;
+	DWORD ip = 0;
+	WORD port = 0;//WORDµÈÍ¬ÓÚunsigned short
+	string username = "";
+};
+
 class UserDoc {
 
 public:
@@ -15,15 +23,17 @@ public:
 	void initDoc();
 
 };
-class UserList
+class WaitList
 {
-public:
-	UserList();
-	~UserList();
 
 public:
 	unordered_map<SOCKET, string> myMap;
 };
 
+class LinkInfo
+{
+public:
+	unordered_map<SOCKET, myUser> myMap;
+};
 
 

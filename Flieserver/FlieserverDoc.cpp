@@ -96,10 +96,81 @@ void CFlieserverDoc::BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl)
 
 void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int strlen)
 {
+	//函数：拿到用户名，查用户名对应的密码，随机出随机数，和密钥异或，存起来，然后发送随机数。最后，更改状态
+	switch (event)
+	{
+	case 0://非法数据
+		break;
+	case 1://用户名到来
+	{
+		int namelen = buf[1];
+		string username(&buf[2], namelen);
+		if (m_UserInfo.myMap.count(username)) 
+		{
+			m_linkInfo.myMap[hSocket].username = username;
+			stringstream stream;
+			
+			stream << m_UserInfo.myMap[username];
+			m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, "本地计算值"));
+			//send(hSocket,)
+			//更改状态
+			m_WaitAns.myMap.insert(pair<SOCKET, string>(hSocket, username));
+			m_WaitAcc.myMap.erase(hSocket);
+		}
+		else//非法用户
+		{
+
+		}
+		break;
+	}
+	case 2://质询结果到来,不应到来
+	{
+		break;
+	}
+	default:
+		break;
+	}
+	return;
 }
 
 void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen)
 {
+	//函数：提取有用信息，把信息和存的值比较，如果正确，返回认证结果，更改状态，用户在线。如果错误，就...
+	switch (event)
+	{
+	case 0://非法数据
+		break;
+	case 1://用户名到来，不应到来
+	{
+		break;
+	}
+	case 2://质询结果到来
+	{
+		int anslen = buf[1];
+		string answer(&buf[2], anslen);
+		if (m_Comparison.myMap.count(hSocket))
+		{
+			if (answer == m_Comparison.myMap[hSocket])
+			{
+
+				m_UserOL.myMap.insert(pair<SOCKET, string>(hSocket, m_WaitAns.myMap[hSocket]));
+				m_WaitAns.myMap.erase(hSocket);
+			}
+			else// 质询结果出错
+			{
+
+			}
+		}
+		else//非法质询结果
+		{
+
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	return;
 }
 
 BOOL CFlieserverDoc::OnNewDocument()

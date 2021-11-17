@@ -38,11 +38,14 @@ public:
 #endif
 
 public:
-	UserDoc m_UserInfo;//本地用户信息
-	UserList m_WaitAcc;//等待用户名
-	UserList m_WaitAns;//等待质询的回应
-	UserList m_UserOL;//授权后，正式在线
-	UserList m_Sendrand;//保存已经发送的质询随机数，socket-string数据形式
+	UserDoc m_UserInfo;//本地用户信息 string-string,用户名-密码
+	LinkInfo m_linkInfo;//IP地址，端口号等，<SOCKET, myUser>
+
+	WaitList m_WaitAcc;//等待用户名 socket-string，socket-test
+	WaitList m_WaitAns;//等待质询的回应，socket-string，socket-用户名
+	WaitList m_Comparison;//保存客户端应该返回的质询结果，socket-string，socket-应该返回的质询结果
+	WaitList m_UserOL;//授权后，正式在线，socket-string，socket-用户名
+
 // 生成的消息映射函数
 protected:
 	DECLARE_MESSAGE_MAP()

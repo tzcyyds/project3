@@ -131,21 +131,26 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 		switch (newEvent)
 		{
 		case FD_ACCEPT:
+		{
 			hCommSock = accept(hSocket, (sockaddr*)&clntAdr, &clntAdrLen);
 			if (hCommSock == SOCKET_ERROR)
 			{
 				closesocket(hSocket);
 				break;
 			}
-			
+
 			//hCommSock进入连接建立状态
 			pDoc->m_WaitAcc.myMap.insert(pair<SOCKET, string>(hCommSock, "test"));
+			myUser user;
+			user.ip = clntAdr.sin_addr.S_un.S_addr;
+			user.port = clntAdr.sin_port;
+			user.username = "NULL";
+
+			pDoc->m_linkInfo.myMap.insert(pair<SOCKET, myUser>(hCommSock, user));
 
 			break;
+		}
 		case FD_READ:
-			//strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
-			//if (strLen <= 0);
-			//else;
 			//首先判断hSocket是否通过认证
 			if (pDoc->m_UserOL.myMap.count(hSocket))//如果认证已通过，就处理普通消息
 			{
@@ -158,12 +163,22 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				if (strLen <= 0) 
 				{
 
+					return CFormView::WindowProc(message, wParam, lParam);
 				}
-				
-				//继续数据的分类处理，非chap认证数据一律丢弃
-				
-				//提取事件,事件赋值。
-				int event = 1;
+				int event = 0;
+				//继续数据的分类处理，非chap认证数据一律丢弃,提取事件
+				if ((int)buf[1] == 1)
+				{
+					event = 1;//用户名到来
+				}
+				else if ((int)buf[1] == 3)
+				{
+					event = 2;//质询结果到来
+				}
+				else//非法数据
+				{
+
+				}
 				//设定状态
 				int state = 0;
 				if (pDoc->m_WaitAcc.myMap.count(hSocket))
@@ -176,22 +191,24 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else
 				{
-					state = 0;//质询出错，准备关闭连接
+					//质询出错
 				}
 				//switch 根据状态
 				switch (state)
 				{
+				case 0://质询出错
+					break;
 				case 1://等待用户名，并发送质询
 					pDoc->fsm_Challenge(hSocket,event,buf,strLen);
+					//连接建立状态，调函数，传hSocket，事件号，报文。
 					break;
 				case 2://等待质询结果
 					pDoc->fsm_HandleRes(hSocket, event, buf, strLen);
+					//等待质询结果状态，调函数，传参。
 					break;
 				default:
 					break;
 				}
-//连接建立状态，调函数，传hSocket，事件号，报文。函数：拿到用户名，查用户名对应的密码，随机出随机数，和密钥异或，存起来，然后发送随机数。最后，更改状态
-//等待质询结果状态，调函数，传参。函数：提取有用信息，把信息和存的值比较，如果正确，返回认证结果，更改状态，用户在线。如果错误，就...
 			}
 			break;
 		case FD_CLOSE:
