@@ -11,9 +11,8 @@
 #endif
 
 #include "FlieserverDoc.h"
-
 #include <propkey.h>
-
+#include <sstream>
 using namespace std;
 
 #ifdef _DEBUG
@@ -36,6 +35,7 @@ CFlieserverDoc::CFlieserverDoc() noexcept
 	//CFlieserverDoc::BroseAllFiles("..\\m_filepath");
 	SetTitle(TEXT("fileserver"));
 	m_UserInfo.initDoc();//本地用户信息
+	m_linkInfo.myMap.clear();//连接-用户名信息
 	m_WaitAcc.myMap.clear();//等待回应
 	m_WaitAns.myMap.clear();//等待回应
 	m_UserOL.myMap.clear();//授权后，正式在线

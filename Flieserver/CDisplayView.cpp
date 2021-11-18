@@ -145,72 +145,81 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			user.ip = clntAdr.sin_addr.S_un.S_addr;
 			user.port = clntAdr.sin_port;
 			user.username = "NULL";
-
 			pDoc->m_linkInfo.myMap.insert(pair<SOCKET, myUser>(hCommSock, user));
 
 			break;
 		}
 		case FD_READ:
-			//首先判断hSocket是否通过认证
-			if (pDoc->m_UserOL.myMap.count(hSocket))//如果认证已通过，就处理普通消息
+		{
+			//首先接收数据
+			strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
+			if (strLen <= 0)
 			{
-				//做数据分类，如果是传文件命令，就传，否则就当普通字符串。
+
+				break;
+			}
+			int event = 0;
+			//数据的分类处理，提取事件号
+			if ((int)buf[0] == 1)
+			{
+				event = 1;//用户名到来
+			}
+			else if ((int)buf[0] == 3)
+			{
+				event = 2;//质询结果到来
+			}
+			else//非法数据
+			{
 
 			}
-			else//如果还未通过，就只能接收认证报文
+			//设定状态
+			int state = 0;
+			if (pDoc->m_WaitAcc.myMap.count(hSocket))
 			{
-				strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
-				if (strLen <= 0) 
-				{
+				state = 1;//已连接，正在等待用户名
+			}
+			else if (pDoc->m_WaitAns.myMap.count(hSocket))
+			{
+				state = 2;//用户名存在，正在认证密码，等待回应
+			}
+			else if (pDoc->m_UserOL.myMap.count(hSocket))
+			{
+				state = 3;//用户已在线，等待其它类型数据
+			}
+			else if (0)
+			{
 
-					return CFormView::WindowProc(message, wParam, lParam);
-				}
-				int event = 0;
-				//继续数据的分类处理，非chap认证数据一律丢弃,提取事件
-				if ((int)buf[1] == 1)
-				{
-					event = 1;//用户名到来
-				}
-				else if ((int)buf[1] == 3)
-				{
-					event = 2;//质询结果到来
-				}
-				else//非法数据
-				{
+			}
+			else if (0)
+			{
 
-				}
-				//设定状态
-				int state = 0;
-				if (pDoc->m_WaitAcc.myMap.count(hSocket))
-				{
-					state = 1;//已连接，正在等待用户名
-				}
-				else if (pDoc->m_WaitAns.myMap.count(hSocket))
-				{
-					state = 2;//用户名存在，正在认证密码，等待回应
-				}
-				else
-				{
-					//质询出错
-				}
-				//switch 根据状态
-				switch (state)
-				{
-				case 0://质询出错
-					break;
-				case 1://等待用户名，并发送质询
-					pDoc->fsm_Challenge(hSocket,event,buf,strLen);
-					//连接建立状态，调函数，传hSocket，事件号，报文。
-					break;
-				case 2://等待质询结果
-					pDoc->fsm_HandleRes(hSocket, event, buf, strLen);
-					//等待质询结果状态，调函数，传参。
-					break;
-				default:
-					break;
-				}
+			}
+			else;//质询出错
+			//switch 根据状态
+			switch (state)
+			{
+			case 0://质询出错
+				break;
+			case 1://等待用户名，并发送质询
+				pDoc->fsm_Challenge(hSocket, event, buf, strLen);
+				//连接建立状态，调函数，传hSocket，事件号，报文。
+				break;
+			case 2://等待质询结果
+				pDoc->fsm_HandleRes(hSocket, event, buf, strLen);
+				//等待质询结果状态，调函数，传参。
+				break;
+			case 3:
+				//用户已在线，等待其它指令。
+				break;
+			case 4:
+
+				break;
+			default:
+
+				break;
 			}
 			break;
+		}
 		case FD_CLOSE:
 			closesocket(hSocket);
 			break;
