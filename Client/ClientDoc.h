@@ -30,13 +30,15 @@ public:
 // 实现
 public:
 	virtual ~CClientDoc();
-	void BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl);
+
+	void socket_state1_fsm(SOCKET s);
+	void socket_state2_fsm(SOCKET s);
+	int client_state;
+
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
 #endif
-
-protected:
 
 // 生成的消息映射函数
 protected:

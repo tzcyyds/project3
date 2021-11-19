@@ -168,7 +168,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				event = 2;//质询结果到来
 			}
-			else//非法数据
+			else//其它数据
 			{
 
 			}

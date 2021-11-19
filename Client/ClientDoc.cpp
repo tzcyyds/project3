@@ -17,7 +17,9 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+#include "CDisplayView.h"
 
+constexpr auto MAX_BUF_SIZE = 100;
 // CClientDoc
 
 IMPLEMENT_DYNCREATE(CClientDoc, CDocument)
@@ -31,57 +33,121 @@ END_MESSAGE_MAP()
 CClientDoc::CClientDoc() noexcept
 {
 	// TODO: 在此添加一次性构造代码
-
+	client_state = 0;
 }
 
 CClientDoc::~CClientDoc()
 {
 }
 
-void CClientDoc::BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl)
+
+void CClientDoc::socket_state1_fsm(SOCKET s)
 {
-	//检测路径是否正确并添加必要信息
-	if (filepath == _T(""))
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
+	
+	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
+	if (strLen <= 0)
 	{
-		return;
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
 	}
 	else
 	{
-		if (filepath.Right(1) != _T(""))
+		u_int event= recvbuf[0];
+		//提取事件号
+		switch (event)
 		{
-			filepath += _T("\\");
+		case 2://收到质询报文
+		{
+			u_int num_N = recvbuf[1];
+			char* temp = &recvbuf[2];
+
+			u_int password_value;
+			u_int password_len = pView->m_password.GetLength();//只有点击连接时，才会刷新用户名和密码，此时一定可以获取到上次正确的密码
+			u_short correct_result = 0;
+			u_short correct_password = 0;
+			u_short correct_sum = 0;
+
+			if (num_N <= 20)//整数个数小于20,u_int一定大于0
+			{
+				for (size_t i = 0; i < num_N; i++)
+				{
+					//这两行待修改
+					correct_sum += ntohs(*(u_short*)temp);;
+					temp = temp + 2;
+				}
+
+				if ((password_len > 0) && (password_len <= 5))//两字节，最大65535
+				{
+					password_value = (u_int)_ttoi(pView->m_password);
+					correct_password = (u_short)(password_value % 65536);
+					correct_result = correct_sum ^ correct_password;
+
+					
+					sendbuf[0] = 3;//填写事件号
+					temp = &sendbuf[1];
+					*temp = htons(correct_result);//两字节
+					send(s, sendbuf, 4, 0);
+
+					client_state = 2;//状态转换
+				}
+				else//密码长度不对
+				{
+					break;
+				}
+			}
+			else//整数个数不对
+			{
+				break;
+			}
 		}
-		filepath += _T("*.*");
+			break;
+		default:
+			break;
+		}
 	}
+}
 
-	//递归枚举文件夹下的内容
-	CFileFind find;
-	CString strpath;
-	CString str_fileName;
-	BOOL IsFind = find.FindFile(filepath);
-	CTreeCtrl* m_TreeCtrl = treeCtrl;
-	while (IsFind)
+void CClientDoc::socket_state2_fsm(SOCKET s)
+{
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	int temp = 0;
+	
+	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
+	if (strLen <= 0)
 	{
-		IsFind = find.FindNextFile();
-		strpath = find.GetFilePath();
-
-		if (!find.IsDirectory() && !find.IsDots())
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
-			str_fileName = find.GetFileName();
-			m_TreeCtrl->InsertItem((LPCSTR)str_fileName);
-			//AfxMessageBox(str_fileName);
+			closesocket(s);
+			return;
 		}
-		else if (find.IsDirectory() && !find.IsDots())
+	}
+	else
+	{
+		int event = recvbuf[0];
+		switch (event)
 		{
-			str_fileName = find.GetFileName();
-			m_TreeCtrl->InsertItem((LPCSTR)str_fileName);
-			//AfxMessageBox(str_fileName);
-
-			BrowseAllFiles(strpath, m_TreeCtrl);
-		}
-		else
-		{
-			continue;
+		case 4://认证结果报文
+			temp = recvbuf[1];
+			if (temp == 1)//认证成功
+			{
+				client_state = 3;//认证成功，进入等待操作状态
+			}
+			else
+			{
+				break;
+			}
+			break;
+		default:
+			break;
 		}
 	}
 }

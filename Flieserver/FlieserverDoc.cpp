@@ -13,6 +13,9 @@
 #include "FlieserverDoc.h"
 #include <propkey.h>
 #include <sstream>
+//#include <cstdlib>
+constexpr auto MAX_BUF_SIZE = 128;
+
 using namespace std;
 
 #ifdef _DEBUG
@@ -96,6 +99,8 @@ void CFlieserverDoc::BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl)
 
 void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int strlen)
 {
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = sendbuf;
 	//函数：拿到用户名，查用户名对应的密码，随机出随机数，和密钥异或，存起来，然后发送随机数。最后，更改状态
 	switch (event)
 	{
@@ -108,13 +113,41 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 		if (m_UserInfo.myMap.count(username)) 
 		{
 			m_linkInfo.myMap[hSocket].username = username;
-			stringstream stream;
-			
-			stream << m_UserInfo.myMap[username];
-			m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, "本地计算值"));
-			//send(hSocket,)
-			//更改状态
-			m_WaitAns.myMap.insert(pair<SOCKET, string>(hSocket, username));
+			//准备密码
+			string password;
+			u_short correct_password = 0;
+			password = m_UserInfo.myMap[username];
+			stringstream sstream(password);
+			sstream >> correct_password;//转换成2字节整数
+			correct_password = correct_password % 65535;//防止超出最大值,我存疑
+
+			//准备要发送的质询数据，N，N个随机数
+			u_int seed;//保证随机数足够随机
+			seed = (u_int)time(0);
+			srand(seed);
+			constexpr auto MIN_VALUE = 0;
+			constexpr auto MAX_VALUE = 20;
+			u_int num_N = rand() % (MAX_VALUE - MIN_VALUE + 1) + MIN_VALUE;
+
+			sendbuf[0] = 2;//填事件号
+			sendbuf[1] = num_N;//整数个数
+			temp = sendbuf + 2;//指针就位
+
+			u_short correct_sum = 0;//本地计算值
+			u_short correct_result = 0;
+			u_short x = 0;//两字节u_short;
+			for (size_t i = 0; i < num_N; i++)
+			{
+				x = htons(rand());//最大65535
+				_itoa_s(x, temp, 5, 10);//最多5位数
+				temp += 5;
+				correct_sum += x;
+				
+			}
+			send(hSocket, sendbuf, 5 * num_N + 3, 0);//发送质询报文
+			correct_result = correct_sum ^ correct_password;//异或
+			m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
+			m_WaitAns.myMap.insert(pair<SOCKET, string>(hSocket, username));//更改状态
 			m_WaitAcc.myMap.erase(hSocket);
 		}
 		else//非法用户
@@ -135,6 +168,8 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 
 void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen)
 {
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	//char* temp = sendbuf;
 	//函数：提取有用信息，把信息和存的值比较，如果正确，返回认证结果，更改状态，用户在线。如果错误，就...
 	switch (event)
 	{
@@ -152,7 +187,9 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 		{
 			if (answer == m_Comparison.myMap[hSocket])
 			{
-
+				sendbuf[0] = 4;//填事件号
+				sendbuf[1] = 1;//认证成功
+				send(hSocket, sendbuf, 3, 0);//发送
 				m_UserOL.myMap.insert(pair<SOCKET, string>(hSocket, m_WaitAns.myMap[hSocket]));
 				m_WaitAns.myMap.erase(hSocket);
 			}
