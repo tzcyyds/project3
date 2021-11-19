@@ -14,6 +14,6 @@
 - [ ] ...
 
 ## 编调记录：
-|编调错误提示|可能的原因|解决方法|批注
-|---|
-|C2664 ‘int CWnd:: MessageBoxW (LPCTSTR, LPCTSTR, UNIT)’|字符集从MBCS改成Unicode后出现的错误，参数不能从const char * 转为LPCWSTR|更改字符集为多字节字符集|也可以字符串使用_T("")表示 char 换成TCHAR
+|编调错误提示|可能的原因|解决方法|批注|
+|:---:|:---:|:---:|:---:|
+|C2664 ‘int CWnd:: MessageBoxW (LPCTSTR, LPCTSTR, UNIT)’|字符集从MBCS改成Unicode后出现的错误，参数不能从const char * 转为LPCWSTR|更改字符集为多字节字符集|也可以字符串使用_T("")表示 char 换成TCHAR|
