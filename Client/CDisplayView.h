@@ -31,6 +31,7 @@ protected:
 public:
 	CString m_user;
 	CString m_password;
+	int client_state;
 	afx_msg void OnBnClickedButton1();
 	afx_msg void OnBnClickedButton2();
 };

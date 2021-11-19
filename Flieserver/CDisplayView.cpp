@@ -88,13 +88,14 @@ void CDisplayView::OnBnClickedButton1()//启动
 	hListenSock = socket(AF_INET, SOCK_STREAM, 0);
 	if (hListenSock == INVALID_SOCKET)
 	{
-			MessageBox("socket() failed", "Server", MB_OK);
-			exit(1);
+		MessageBox("socket() failed", "Server", MB_OK);
+		exit(1);
 	}
 	if (bind(hListenSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)
 	{
 		MessageBox("bind() failed", "Server", MB_OK);
-		exit(1);		}
+		exit(1);		
+	}
 	if (listen(hListenSock, 5) == SOCKET_ERROR)
 	{
 		MessageBox("listen() failed", "Server", MB_OK);
@@ -105,7 +106,7 @@ void CDisplayView::OnBnClickedButton1()//启动
 		MessageBox("WSAAsyncSelect() failed", "Server", MB_OK);
 		exit(1);
 	}
-
+	AfxMessageBox("init finish");
 }
 
 
@@ -146,7 +147,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			user.port = clntAdr.sin_port;
 			user.username = "NULL";
 			pDoc->m_linkInfo.myMap.insert(pair<SOCKET, myUser>(hCommSock, user));
-
+			AfxMessageBox("wait account");
 			break;
 		}
 		case FD_READ:

@@ -33,7 +33,6 @@ public:
 
 	void socket_state1_fsm(SOCKET s);
 	void socket_state2_fsm(SOCKET s);
-	int client_state;
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;

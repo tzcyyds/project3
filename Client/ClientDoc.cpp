@@ -33,7 +33,7 @@ END_MESSAGE_MAP()
 CClientDoc::CClientDoc() noexcept
 {
 	// TODO: 在此添加一次性构造代码
-	client_state = 0;
+	
 }
 
 CClientDoc::~CClientDoc()
@@ -97,7 +97,7 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 					*temp = htons(correct_result);//两字节
 					send(s, sendbuf, 4, 0);
 
-					client_state = 2;//状态转换
+					pView->client_state = 2;//状态转换
 				}
 				else//密码长度不对
 				{
@@ -120,7 +120,9 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 {
 	char recvbuf[MAX_BUF_SIZE] = { 0 };
 	int temp = 0;
-	
+	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
 	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
 	if (strLen <= 0)
 	{
@@ -139,7 +141,7 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 			temp = recvbuf[1];
 			if (temp == 1)//认证成功
 			{
-				client_state = 3;//认证成功，进入等待操作状态
+				pView->client_state = 3;//认证成功，进入等待操作状态
 			}
 			else
 			{
