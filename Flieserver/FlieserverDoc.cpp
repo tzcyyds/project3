@@ -149,7 +149,7 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
 			m_WaitAns.myMap.insert(pair<SOCKET, string>(hSocket, username));//更改状态
 			m_WaitAcc.myMap.erase(hSocket);
-			AfxMessageBox("Challenge finish");
+			//printf("Challenge finish");
 		}
 		else//非法用户
 		{
@@ -194,16 +194,16 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 				send(hSocket, sendbuf, 3, 0);//发送
 				m_UserOL.myMap.insert(pair<SOCKET, string>(hSocket, m_WaitAns.myMap[hSocket]));
 				m_WaitAns.myMap.erase(hSocket);
-				AfxMessageBox("user online");
+				//printf("user online");
 			}
 			else// 质询结果出错
 			{
-				AfxMessageBox("质询结果错");
+				//printf("质询结果错");
 			}
 		}
 		else//非法套接字发送的质询结果
 		{
-			AfxMessageBox("质询结");
+			//printf("非法套接字的质询结果");
 		}
 		break;
 	}

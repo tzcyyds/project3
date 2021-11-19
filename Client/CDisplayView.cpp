@@ -150,7 +150,7 @@ void CDisplayView::OnBnClickedButton1()//连接
 	sendbuf[1] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
 	memcpy(sendbuf + 2, m_user, strLen);//填写用户名字符串
 	send(hCommSock, sendbuf, strLen+2, 0);
-	AfxMessageBox("send account");
+	//printf("send account");
 	
 
 

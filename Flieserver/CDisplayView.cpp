@@ -106,7 +106,7 @@ void CDisplayView::OnBnClickedButton1()//启动
 		MessageBox("WSAAsyncSelect() failed", "Server", MB_OK);
 		exit(1);
 	}
-	AfxMessageBox("init finish");
+	//printf("init finish");
 }
 
 
@@ -147,7 +147,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			user.port = clntAdr.sin_port;
 			user.username = "NULL";
 			pDoc->m_linkInfo.myMap.insert(pair<SOCKET, myUser>(hCommSock, user));
-			AfxMessageBox("wait account");
+			//printf("wait account");
 			break;
 		}
 		case FD_READ:
