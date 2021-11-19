@@ -109,6 +109,7 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 	case 1://用户名到来
 	{
 		int namelen = buf[1];
+		assert(namelen >= 0 && namelen <= MAX_BUF_SIZE);
 		string username(&buf[2], namelen);
 		if (m_UserInfo.myMap.count(username)) 
 		{
@@ -149,7 +150,7 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
 			m_WaitAns.myMap.insert(pair<SOCKET, string>(hSocket, username));//更改状态
 			m_WaitAcc.myMap.erase(hSocket);
-			//printf("Challenge finish");
+			TRACE("Challenge finish");
 		}
 		else//非法用户
 		{
@@ -183,7 +184,8 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 	}
 	case 2://质询结果到来
 	{
-		u_int anslen = buf[1];
+		int anslen = buf[1];
+		assert(anslen >= 0 && anslen <= MAX_BUF_SIZE);
 		string answer(&buf[2], anslen);
 		if (m_Comparison.myMap.count(hSocket))
 		{
@@ -194,16 +196,16 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 				send(hSocket, sendbuf, 3, 0);//发送
 				m_UserOL.myMap.insert(pair<SOCKET, string>(hSocket, m_WaitAns.myMap[hSocket]));
 				m_WaitAns.myMap.erase(hSocket);
-				//printf("user online");
+				TRACE("%s user online", m_UserOL.myMap[hSocket]);
 			}
 			else// 质询结果出错
 			{
-				//printf("质询结果错");
+				TRACE("质询结果错");
 			}
 		}
 		else//非法套接字发送的质询结果
 		{
-			//printf("非法套接字的质询结果");
+			TRACE("非法套接字的质询结果");
 		}
 		break;
 	}

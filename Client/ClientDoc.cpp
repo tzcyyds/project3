@@ -96,7 +96,7 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 					temp = &sendbuf[1];
 					*temp = htons(correct_result);//两字节
 					send(s, sendbuf, 4, 0);
-
+					TRACE("respond challenge");
 					pView->client_state = 2;//状态转换
 				}
 				else//密码长度不对
@@ -142,6 +142,7 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 			if (temp == 1)//认证成功
 			{
 				pView->client_state = 3;//认证成功，进入等待操作状态
+				TRACE("认证成功");
 			}
 			else
 			{
