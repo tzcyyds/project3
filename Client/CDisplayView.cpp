@@ -8,7 +8,7 @@
 
 
 // CDispalyView
-#define WM_SOCK WM_USER + 1// 自定义消息，在WM_USER的基础上进行
+#define WM_SOCK WM_USER + 100// 自定义消息，在WM_USER的基础上进行
 constexpr auto MAX_BUF_SIZE = 100;
 
 
@@ -18,6 +18,7 @@ CDisplayView::CDisplayView()
 	: CFormView(IDD_DISPLAYVIEW)
 	, m_user(_T(""))
 	, m_password(_T(""))
+	,client_state(0)
 {
 
 }
@@ -78,7 +79,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 		switch (newEvent)
 		{
 		case FD_READ:
-			switch (pDoc->client_state)
+			switch (client_state)
 			{
 			case 1://等待质询
 				pDoc->socket_state1_fsm(hSocket);
@@ -122,7 +123,7 @@ void CDisplayView::OnBnClickedButton1()//连接
 		MessageBox("WSAStartup() failed", "Client", MB_OK);
 		exit(1);
 	}
-	hCommSock = socket(AF_INET, SOCK_DGRAM, 0);
+	hCommSock = socket(AF_INET, SOCK_STREAM, 0);
 	if (hCommSock == INVALID_SOCKET)
 	{
 		MessageBox("socket() failed", "Client", MB_OK);
@@ -135,7 +136,7 @@ void CDisplayView::OnBnClickedButton1()//连接
 		MessageBox("connect() failed", "Client", MB_OK);
 		exit(1);
 	}
-
+	client_state = 1;//连接成功，套接字进入连接建立状态
 	if (WSAAsyncSelect(hCommSock, m_hWnd, WM_SOCK, FD_READ | FD_CLOSE) == SOCKET_ERROR)
 	{
 		MessageBox("WSAAsyncSelect() failed", "Client", MB_OK);
@@ -149,8 +150,8 @@ void CDisplayView::OnBnClickedButton1()//连接
 	sendbuf[1] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
 	memcpy(sendbuf + 2, m_user, strLen);//填写用户名字符串
 	send(hCommSock, sendbuf, strLen+2, 0);
-
-	pDoc->client_state = 1;//连接并且发送用户名成功，套接字进入连接建立状态
+	AfxMessageBox("send account");
+	
 
 
 }
