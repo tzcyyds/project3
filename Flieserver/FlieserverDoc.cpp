@@ -119,15 +119,14 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			password = m_UserInfo.myMap[username];
 			int t_p = 0;
 			sstream << password;
-			sstream >> t_p;//转换成2字节整数
+			sstream >> t_p;//转换成整数
 			sstream.clear();
-			t_p = t_p % 65535;//防止超出最大值,我存疑
 
 			//准备要发送的质询数据，N，N个随机数
 			u_int seed;//保证随机数足够随机
 			seed = (u_int)time(0);
 			srand(seed);
-			constexpr auto MIN_VALUE = 0;
+			constexpr auto MIN_VALUE = 1;
 			constexpr auto MAX_VALUE = 20;
 			u_int num_N = rand() % (MAX_VALUE - MIN_VALUE + 1) + MIN_VALUE;
 
@@ -204,7 +203,7 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 				send(hSocket, sendbuf, 3, 0);//发送
 				m_UserOL.myMap.insert(pair<SOCKET, string>(hSocket, m_WaitAns.myMap[hSocket]));
 				m_WaitAns.myMap.erase(hSocket);
-				TRACE("%s user online", m_UserOL.myMap[hSocket]);
+				TRACE("user online");
 			}
 			else// 质询结果出错
 			{
