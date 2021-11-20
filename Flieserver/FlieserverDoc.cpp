@@ -118,10 +118,9 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			string password;
 			password = m_UserInfo.myMap[username];
 			int t_p = 0;
-			sstream.clear();
 			sstream << password;
 			sstream >> t_p;//转换成2字节整数
-			//sstream.clear();
+			sstream.clear();
 			t_p = t_p % 65535;//防止超出最大值,我存疑
 
 			//准备要发送的质询数据，N，N个随机数
@@ -193,9 +192,8 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 		if (m_Comparison.myMap.count(hSocket))
 		{
 			u_short answer = ntohs(*(u_short*)temp);
-			//要保证sstream是空的
+			//用完要清空
 			u_short t_result = 0;
-			sstream.clear();
 			sstream << m_Comparison.myMap[hSocket];
 			sstream >> t_result;//转换成2字节整数
 			sstream.clear();
