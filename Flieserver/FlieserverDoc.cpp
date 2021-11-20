@@ -116,11 +116,12 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			m_linkInfo.myMap[hSocket].username = username;
 			//准备密码
 			string password;
-			u_short correct_password = 0;
+			int t_p = 0;
 			password = m_UserInfo.myMap[username];
 			stringstream sstream(password);
-			sstream >> correct_password;//转换成2字节整数
-			correct_password = correct_password % 65535;//防止超出最大值,我存疑
+			sstream >> t_p;//转换成2字节整数
+			sstream.clear();
+			t_p = t_p % 65535;//防止超出最大值,我存疑
 
 			//准备要发送的质询数据，N，N个随机数
 			u_int seed;//保证随机数足够随机
@@ -136,13 +137,16 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 
 			u_short correct_sum = 0;//本地计算值
 			u_short correct_result = 0;
+			u_short correct_password = (u_short)t_p;
 			u_short x = 0;//两字节u_short;
 			for (size_t i = 0; i < num_N; i++)
 			{
-				x = htons(rand());//最大65535
+				x = rand();//最大65535
+				correct_sum += x;
+				x = htons(x);
 				memcpy(temp, &x, 2);
 				temp += 2;
-				correct_sum += x;
+
 				
 			}
 			send(hSocket, sendbuf, MAX_BUF_SIZE, 0);//发送质询报文
@@ -172,7 +176,7 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen)
 {
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
-	//char* temp = sendbuf;
+	char* temp = buf + 1;
 	//函数：提取有用信息，把信息和存的值比较，如果正确，返回认证结果，更改状态，用户在线。如果错误，就...
 	switch (event)
 	{
@@ -184,12 +188,14 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 	}
 	case 2://质询结果到来
 	{
-		int anslen = buf[1];
-		assert(anslen >= 0 && anslen <= MAX_BUF_SIZE);
-		string answer(&buf[2], anslen);
+
 		if (m_Comparison.myMap.count(hSocket))
 		{
-			if (answer == m_Comparison.myMap[hSocket])
+			u_short answer = ntohs(*(u_short*)temp);
+			stringstream sstream(m_Comparison.myMap[hSocket]);
+			u_short t_result = 0;
+			sstream >> t_result;//转换成2字节整数
+			if (answer == t_result)
 			{
 				sendbuf[0] = 4;//填事件号
 				sendbuf[1] = 1;//认证成功

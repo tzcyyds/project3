@@ -70,7 +70,7 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 			u_int num_N = recvbuf[1];
 			char* temp = &recvbuf[2];
 
-			u_int password_value;
+			u_int password_value = 0;
 			u_int password_len = pView->m_password.GetLength();//只有点击连接时，才会刷新用户名和密码，此时一定可以获取到上次正确的密码
 			u_short correct_result = 0;
 			u_short correct_password = 0;
@@ -94,7 +94,7 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 					
 					sendbuf[0] = 3;//填写事件号
 					temp = &sendbuf[1];
-					*temp = htons(correct_result);//两字节
+					*(u_short*)temp = htons(correct_result);//写入赋值，挺复杂的写法
 					send(s, sendbuf, 4, 0);
 					TRACE("respond challenge");
 					pView->client_state = 2;//状态转换
