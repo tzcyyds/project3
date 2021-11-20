@@ -121,7 +121,7 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			sstream.clear();
 			sstream << password;
 			sstream >> t_p;//转换成2字节整数
-			sstream.clear();
+			//sstream.clear();
 			t_p = t_p % 65535;//防止超出最大值,我存疑
 
 			//准备要发送的质询数据，N，N个随机数
