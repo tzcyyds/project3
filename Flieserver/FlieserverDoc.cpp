@@ -17,7 +17,7 @@
 constexpr auto MAX_BUF_SIZE = 128;
 
 using namespace std;
-
+stringstream sstream;
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -116,9 +116,10 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 			m_linkInfo.myMap[hSocket].username = username;
 			//准备密码
 			string password;
-			int t_p = 0;
 			password = m_UserInfo.myMap[username];
-			stringstream sstream(password);
+			int t_p = 0;
+			sstream.clear();
+			sstream << password;
 			sstream >> t_p;//转换成2字节整数
 			sstream.clear();
 			t_p = t_p % 65535;//防止超出最大值,我存疑
@@ -192,9 +193,12 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 		if (m_Comparison.myMap.count(hSocket))
 		{
 			u_short answer = ntohs(*(u_short*)temp);
-			stringstream sstream(m_Comparison.myMap[hSocket]);
+			//要保证sstream是空的
 			u_short t_result = 0;
+			sstream.clear();
+			sstream << m_Comparison.myMap[hSocket];
 			sstream >> t_result;//转换成2字节整数
+			sstream.clear();
 			if (answer == t_result)
 			{
 				sendbuf[0] = 4;//填事件号
