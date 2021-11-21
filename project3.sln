@@ -3,18 +3,34 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31729.503
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FtpClient", "FileClient\FtpClient.vcxproj", "{EEC5AFB4-1D09-4216-8D6B-72EA11FC3811}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FileServer", "FileServer\FileServer.vcxproj", "{923EBF10-01A9-4304-B959-ED4133D6F0E6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FileClient", "FileClient\FileClient.vcxproj", "{EED714E3-4828-4148-AFA1-68155A405A56}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EEC5AFB4-1D09-4216-8D6B-72EA11FC3811}.Debug|x86.ActiveCfg = Debug|Win32
-		{EEC5AFB4-1D09-4216-8D6B-72EA11FC3811}.Debug|x86.Build.0 = Debug|Win32
-		{EEC5AFB4-1D09-4216-8D6B-72EA11FC3811}.Release|x86.ActiveCfg = Release|Win32
-		{EEC5AFB4-1D09-4216-8D6B-72EA11FC3811}.Release|x86.Build.0 = Release|Win32
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Debug|x64.ActiveCfg = Debug|x64
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Debug|x64.Build.0 = Debug|x64
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Debug|x86.ActiveCfg = Debug|Win32
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Debug|x86.Build.0 = Debug|Win32
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Release|x64.ActiveCfg = Release|x64
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Release|x64.Build.0 = Release|x64
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Release|x86.ActiveCfg = Release|Win32
+		{923EBF10-01A9-4304-B959-ED4133D6F0E6}.Release|x86.Build.0 = Release|Win32
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Debug|x64.ActiveCfg = Debug|x64
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Debug|x64.Build.0 = Debug|x64
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Debug|x86.ActiveCfg = Debug|Win32
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Debug|x86.Build.0 = Debug|Win32
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Release|x64.ActiveCfg = Release|x64
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Release|x64.Build.0 = Release|x64
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Release|x86.ActiveCfg = Release|Win32
+		{EED714E3-4828-4148-AFA1-68155A405A56}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
