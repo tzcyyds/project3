@@ -35,6 +35,7 @@ protected:
 public:
 	CString strdirpath; // 文件路径
 
+	// 控件变量
 	CEdit ServerPort;
 	CButton ServerListen;
 	CButton ServerStop;
@@ -44,13 +45,10 @@ public:
 	CString PathtoList(CString path); // 获取指定目录下的文件列表，文件之间用|隔开
 	
 	// Socket相关变量
-	DWORD m_ip;
 	UINT m_port_server;
-	UINT m_port_client;
 	SOCKET hCommSock;
 	SOCKADDR_IN clntAdr;
-	int clntAdrLen;	
+	int clntAdrLen;
 
 	CString m_send;
-	
 };

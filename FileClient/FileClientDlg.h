@@ -68,6 +68,4 @@ public:
 	SOCKET hCommSock;
 
 	CString m_send;
-	
-
 };

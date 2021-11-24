@@ -12,18 +12,14 @@
 #define new DEBUG_NEW
 #endif
 
-
 #define WM_SOCK WM_USER + 1 //自定义消息，在WM_USER的基础上进行
 #define MAX_BUF_SIZE 128
 
 // CFileServerDlg 对话框
 
 
-
 CFileServerDlg::CFileServerDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_FILESERVER_DIALOG, pParent)
-	, m_ip(0x7f000001)
-	, m_port_client(9191)
 	, m_port_server(9190)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -226,7 +222,7 @@ CString CFileServerDlg::PathtoList(CString path) // 获取指定目录下的文�
 		}
 		else
 		{
-			strpath = file_find.GetFilePath();
+			strpath = file_find.GetFilePath(); //获取到的是绝对路径
 			file_list += strpath;
 			file_list += '|';
 		}

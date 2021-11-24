@@ -140,14 +140,14 @@ void CFileClientDlg::OnDisconnect() //断开连接
 	//pInternetSession->Close();
 	FileName.ResetContent();
 	FileName.AddString("连接已经断开！！");
-	ServerIP.EnableWindow(true);
-	ServerLogin.EnableWindow(true);
-	ServerDisconnect.EnableWindow(false);
-	FileInside.EnableWindow(false);
-	FileOutside.EnableWindow(false);
-	FileUpload.EnableWindow(false);
-	FileDownload.EnableWindow(false);
-	FileDelete.EnableWindow(false);
+	ServerIP.EnableWindow(TRUE);
+	ServerLogin.EnableWindow(TRUE);
+	ServerDisconnect.EnableWindow(FALSE);
+	FileInside.EnableWindow(FALSE);
+	FileOutside.EnableWindow(FALSE);
+	FileUpload.EnableWindow(FALSE);
+	FileDownload.EnableWindow(FALSE);
+	FileDelete.EnableWindow(FALSE);
 
 	strdirpath = "";
 }
@@ -182,7 +182,6 @@ LRESULT CFileClientDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				CString m_recv(buf);
 				UpdateDir(m_recv);
 			}
-
 			break;
 		case FD_CLOSE:
 			closesocket(hSocket);
@@ -207,11 +206,10 @@ void CFileClientDlg::OnEnterDir() //进入文件夹
 		int strLen = m_send.GetLength();
 		send(hCommSock, m_send, strLen, 0);
 	}
-
 }
 
 
-void CFileClientDlg::OnGoBack() //返回上一级文件夹
+void CFileClientDlg::OnGoBack() //返回上一级文件夹（TODO：暂时不可以下载文件夹）
 {
 	if (strdirpath.GetLength() != 0) // 判断不是初始化时的目录
 	{
@@ -230,35 +228,65 @@ void CFileClientDlg::OnGoBack() //返回上一级文件夹
 }
 
 
-void CFileClientDlg::OnUpLoad()//上传文件
+void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文件夹）
 {
-	CString str;
-	CString strname;
 	//弹出“打开”对话框
-	CFileDialog file(true, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, "所有文件(*.*)|*.*|", this);
+	char szFilters[] = "所有文件 (*.*)|*.*||";
+	CFileDialog file(TRUE, NULL, NULL,
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
+
+	char desktop[MAX_PATH] = { 0 };
+	SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
+	file.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
+	
 	if (file.DoModal() == IDOK)
 	{
-		str = file.GetPathName();
-		strname = file.GetFileName();
+		//CString strdirpath; 当前所在的云端目录
+		//filename 选择上传的文件名（含绝对路径，含扩展名）
+		//hCommSock 用来通信的套接字
 
+		CString filename = file.GetPathName();
+		FILE* fp = NULL;
+		errno_t error = fopen_s(&fp, filename.GetString(), "rb");
 
+		if (!error && fp)
+		{
+			AfxMessageBox((CString)"上传成功！");
+		}
+
+		AfxMessageBox((CString)"上传成功！");
 	}
-	
-	AfxMessageBox((CString)"上传成功！");
 }
 
 
-void CFileClientDlg::OnDownload()//下载文件
+void CFileClientDlg::OnDownload()//下载文件（TODO：暂时不可以下载文件夹）
 {
 	CString selfile;
 	FileName.GetText(FileName.GetCurSel(), selfile); //获得想要下载资源名
 	if (!selfile.IsEmpty())
 	{
 		//弹出另存为对话框
-		CFileDialog file(FALSE, NULL, selfile, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, "所有文件(*.*)|*.*|", this);
+		CString ext = selfile.Right(selfile.GetLength() - selfile.Find('.'));
+		char szFilters[32] = { 0 };
+		sprintf_s(szFilters, "(*%s)|*%s||", ext.GetString(), ext.GetString());
+		CFileDialog file(FALSE, NULL, selfile,
+			OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
+
+		char desktop[MAX_PATH] = { 0 };
+		SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
+		file.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
+
 		if (file.DoModal() == IDOK)
 		{
-			
+			CString filename = file.GetPathName();
+			if (file.GetFileExt() == "")
+			{
+				filename += ext;
+			}
+			//CString strdirpath; 当前所在的云端目录
+			//selfile 想要下载的文件名
+			//filename 下载的目标文件名（含绝对路径，含扩展名）
+			//hCommSock 用来通信的套接字
 
 			AfxMessageBox((CString)"下载成功！");
 		}
@@ -275,7 +303,6 @@ void CFileClientDlg::OnDelete() // 删除文件
 		{
 			
 		}
-
 	}
 }
 
@@ -303,16 +330,16 @@ bool CFileClientDlg::ConnectServ() // 连接服务器
 	servAdr.sin_addr.s_addr = htonl(m_ip);
 	servAdr.sin_port = htons(m_port_server);
 	WSADATA wsaData;
-	SOCKADDR_IN clntAdr;
+	//SOCKADDR_IN clntAdr;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
 		MessageBox("WSAStartup() failed", "Client", MB_OK);
 		return false;
 	}
-	memset(&clntAdr, 0, sizeof(clntAdr));
-	clntAdr.sin_family = AF_INET;
-	clntAdr.sin_addr.s_addr = htonl(INADDR_ANY);
-	clntAdr.sin_port = htons(m_port_client);
+	//memset(&clntAdr, 0, sizeof(clntAdr));
+	//clntAdr.sin_family = AF_INET;
+	//clntAdr.sin_addr.s_addr = htonl(INADDR_ANY);
+	//clntAdr.sin_port = htons(m_port_client);
 	hCommSock = socket(AF_INET, SOCK_STREAM, 0);
 	if (hCommSock == INVALID_SOCKET)
 	{
