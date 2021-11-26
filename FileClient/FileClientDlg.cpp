@@ -195,13 +195,13 @@ LRESULT CFileClientDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void CFileClientDlg::OnEnterDir() //进入文件夹
 {
-	CString selfile;
+	CString selFile;
 	
-	FileName.GetText(FileName.GetCurSel(), selfile); //获取用户选择的目录名
+	FileName.GetText(FileName.GetCurSel(), selFile); //获取用户选择的目录名
 	
-	if (selfile.Find('.') == -1) // 判断是否为文件夹，原理：文件名有'.'
+	if (selFile.Find('.') == -1) // 判断是否为文件夹，原理：文件名有'.'
 	{
-		m_send = selfile + "\\*";
+		m_send = selFile + "\\*";
 		strdirpath = m_send; // 本地保存当前的文件夹路径，在返回上一级文件夹时会使用到
 		int strLen = m_send.GetLength();
 		send(hCommSock, m_send, strLen, 0);
@@ -227,32 +227,95 @@ void CFileClientDlg::OnGoBack() //返回上一级文件夹（TODO：暂时不可
 	}
 }
 
+BOOL CFileClientDlg::UploadOnce(const char* buf, int length)
+{
+	int leftToSend = length;
+	int bytesSend = 0;
+
+	do// 单次发送
+	{
+		const char* sendBuf = buf + length - leftToSend;
+		bytesSend = send(hCommSock, sendBuf, leftToSend, 0);
+		if (bytesSend == SOCKET_ERROR) return FALSE;
+		leftToSend -= bytesSend;
+	} while (leftToSend > 0);
+	
+	return TRUE;
+}
 
 void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文件夹）
 {
 	//弹出“打开”对话框
 	char szFilters[] = "所有文件 (*.*)|*.*||";
-	CFileDialog file(TRUE, NULL, NULL,
+	CFileDialog fileDlg(TRUE, NULL, NULL,
 		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
 
 	char desktop[MAX_PATH] = { 0 };
 	SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
-	file.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
+	fileDlg.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
 	
-	if (file.DoModal() == IDOK)
+	if (fileDlg.DoModal() == IDOK)
 	{
-		//CString strdirpath; 当前所在的云端目录
-		//filename 选择上传的文件名（含绝对路径，含扩展名）
-		//hCommSock 用来通信的套接字
+		CString fileAbsPath = fileDlg.GetPathName();
+		CString uploadName = fileDlg.GetFileName();
+		CFile uploadFile;
+		CFileException errFile;
 
-		CString filename = file.GetPathName();
-		FILE* fp = NULL;
-		errno_t error = fopen_s(&fp, filename.GetString(), "rb");
-
-		if (!error && fp)
+		if (!(uploadFile.Open(fileAbsPath.GetString(),
+			CFile::modeRead | CFile::typeBinary, &errFile)))
 		{
-			AfxMessageBox((CString)"上传成功！");
+			char errOpenFile[256];
+			errFile.GetErrorMessage(errOpenFile, 255);
+			TRACE("\nError occurred while uploading file:\n"
+				"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
+				errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
+			ASSERT(1);
 		}
+
+		send(hCommSock, "upload\0", 7, 0);//发送upload，让服务器进入upload状态
+
+		int nameLength = uploadName.GetLength();
+		if (UploadOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file name length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		if (UploadOnce(uploadName.GetBuffer(), uploadName.GetLength()) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file name\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		uploadName.ReleaseBuffer();
+		ULONGLONG fileLength = uploadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
+		if (UploadOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+
+//#define SEND_CHUNK_SIZE 4096
+//
+//		char chunkBuf[SEND_CHUNK_SIZE] = { 0 };//#define SEND_CHUNK_SIZE 4096
+//		int leftToSend = fileLength;
+//
+//		do//发送整个文件
+//		{
+//			int readChunkSize = uploadFile.Read(chunkBuf, SEND_CHUNK_SIZE);//#define SEND_CHUNK_SIZE 4096
+//			if (UploadOnce(chunkBuf, readChunkSize) == FALSE)
+//			{
+//				DWORD errSend = WSAGetLastError();
+//				TRACE("\nError occurred while sending file chunks\n"
+//					"\tGetLastError = %d\n", errSend);
+//				ASSERT(errSend != WSAEWOULDBLOCK);
+//			}
+//			leftToSend -= readChunkSize;
+//		} while (leftToSend > 0);
 
 		AfxMessageBox((CString)"上传成功！");
 	}
@@ -261,30 +324,30 @@ void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文�
 
 void CFileClientDlg::OnDownload()//下载文件（TODO：暂时不可以下载文件夹）
 {
-	CString selfile;
-	FileName.GetText(FileName.GetCurSel(), selfile); //获得想要下载资源名
-	if (!selfile.IsEmpty())
+	CString selFile;
+	FileName.GetText(FileName.GetCurSel(), selFile); //获得想要下载资源名
+	if (!selFile.IsEmpty())
 	{
 		//弹出另存为对话框
-		CString ext = selfile.Right(selfile.GetLength() - selfile.Find('.'));
+		CString fileExt = selFile.Right(selFile.GetLength() - selFile.Find('.'));
 		char szFilters[32] = { 0 };
-		sprintf_s(szFilters, "(*%s)|*%s||", ext.GetString(), ext.GetString());
-		CFileDialog file(FALSE, NULL, selfile,
+		sprintf_s(szFilters, "(*%s)|*%s||", fileExt.GetString(), fileExt.GetString());
+		CFileDialog fileDlg(FALSE, NULL, selFile,
 			OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
 
 		char desktop[MAX_PATH] = { 0 };
 		SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
-		file.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
+		fileDlg.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
 
-		if (file.DoModal() == IDOK)
+		if (fileDlg.DoModal() == IDOK)
 		{
-			CString filename = file.GetPathName();
-			if (file.GetFileExt() == "")
+			CString fileName = fileDlg.GetPathName();
+			if (fileDlg.GetFileExt() == "")
 			{
-				filename += ext;
+				fileName += fileExt;
 			}
 			//CString strdirpath; 当前所在的云端目录
-			//selfile 想要下载的文件名
+			//selFile 想要下载的文件名
 			//filename 下载的目标文件名（含绝对路径，含扩展名）
 			//hCommSock 用来通信的套接字
 
@@ -295,9 +358,9 @@ void CFileClientDlg::OnDownload()//下载文件（TODO：暂时不可以下载�
 
 void CFileClientDlg::OnDelete() // 删除文件
 {
-	CString selfile;
-	FileName.GetText(FileName.GetCurSel(), selfile); // 获取用户要删除的文件名
-	if (!selfile.IsEmpty())
+	CString selFile;
+	FileName.GetText(FileName.GetCurSel(), selFile); // 获取用户要删除的文件名
+	if (!selFile.IsEmpty())
 	{
 		if (AfxMessageBox((CString)"确定要删除这个文件？", 4 + 48) == 6)
 		{

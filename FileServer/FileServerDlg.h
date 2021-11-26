@@ -43,6 +43,8 @@ public:
 
 	afx_msg void OnListen();
 	CString PathtoList(CString path); // 获取指定目录下的文件列表，文件之间用|隔开
+	BOOL RecvOnce(char* buf, int length);// 单次接收内容的函数
+	BOOL CFileServerDlg::StateHandle(const char* buf);
 	
 	// Socket相关变量
 	UINT m_port_server;

@@ -144,6 +144,27 @@ void CFileServerDlg::OnListen() // 监听
 	}
 }
 
+BOOL CFileServerDlg::RecvOnce(char* buf, int length)
+{
+	int leftToRecv = length;
+	int bytesRecv = 0;
+
+	do//单次接收
+	{
+		char* recvBuf = buf + length - leftToRecv;
+		bytesRecv = recv(hCommSock, recvBuf, leftToRecv, 0);
+		if (bytesRecv == SOCKET_ERROR) return FALSE;
+		leftToRecv -= bytesRecv;
+	} while (leftToRecv > 0);
+
+	return TRUE;
+}
+
+BOOL CFileServerDlg::StateHandle(const char* buf)
+{
+	switch(buf)
+}
+
 LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	SOCKET hSocket;
@@ -173,24 +194,56 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case FD_READ:
 			strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
-			if (strLen <= 0)
+			//进入函数判断当前状态并处理
+			if (strcmp(buf, "upload") == 0)//客户端发送了upload，让服务器进入upload状态
 			{
-				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				int nameLength;
+				if (RecvOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
 				{
-					closesocket(hSocket);
-					MessageBox("recv() failed", "Server", MB_OK);
-					break;
+					DWORD errSend = WSAGetLastError();
+					TRACE("\nError occurred while receiving file name length\n"
+						"\tGetLastError = %d\n", errSend);
+					ASSERT(errSend != WSAEWOULDBLOCK);
+				}
+				CString uploadName;
+				if (RecvOnce(uploadName.GetBuffer(), nameLength) == FALSE)
+				{
+					DWORD errSend = WSAGetLastError();
+					TRACE("\nError occurred while receiving file name\n"
+						"\tGetLastError = %d\n", errSend);
+					ASSERT(errSend != WSAEWOULDBLOCK);
+				}
+				uploadName.ReleaseBuffer();
+				ULONGLONG fileLength;
+				if (RecvOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
+				{
+					DWORD errSend = WSAGetLastError();
+					TRACE("\nError occurred while receiving file length\n"
+						"\tGetLastError = %d\n", errSend);
+					ASSERT(errSend != WSAEWOULDBLOCK);
 				}
 			}
-			else
+			else//发送的是路径名称
 			{
-				CString m_recv(buf);
-				if (m_recv.Find("m_filepath") != -1) // 判断如果是默认目录，则不能返回上一级
+				if (strLen <= 0)
 				{
-					m_send = PathtoList(m_recv); // 发送该目录下的文件列表给客户端
-					strLen = m_send.GetLength();
-					send(hCommSock, m_send, strLen, 0);
-				}		
+					if (WSAGetLastError() != WSAEWOULDBLOCK)
+					{
+						closesocket(hSocket);
+						MessageBox("recv() failed", "Server", MB_OK);
+						break;
+					}
+				}
+				else
+				{
+					CString m_recv(buf);
+					if (m_recv.Find("m_filepath") != -1) // 判断如果是默认目录，则不能返回上一级
+					{
+						m_send = PathtoList(m_recv); // 发送该目录下的文件列表给客户端
+						strLen = m_send.GetLength();
+						send(hCommSock, m_send, strLen, 0);
+					}
+				}
 			}
 			break;
 		case FD_CLOSE:

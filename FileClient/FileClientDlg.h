@@ -59,6 +59,7 @@ public:
 	afx_msg bool ConnectServ();
 	afx_msg void UpdateDir(CString recv);
 	void SplitString(const std::string& s, std::vector<std::string>& v, const std::string& c); // 字符串分割函数
+	BOOL UploadOnce(const char* buf, int length);// 单次上传内容的函数
 
 	// Socket相关变量
 	DWORD m_ip;
