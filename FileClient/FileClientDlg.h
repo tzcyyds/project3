@@ -34,6 +34,7 @@ protected:
 
 public:
 	CString strdirpath; // 文件路径
+	DWORD state;// 状态记录
 
 	CButton ServerLogin;
 	CButton ServerDisconnect;
@@ -60,6 +61,7 @@ public:
 	afx_msg void UpdateDir(CString recv);
 	void SplitString(const std::string& s, std::vector<std::string>& v, const std::string& c); // 字符串分割函数
 	BOOL UploadOnce(const char* buf, int length);// 单次上传内容的函数
+	void CFileClientDlg::StateHandler();
 
 	// Socket相关变量
 	DWORD m_ip;
@@ -69,4 +71,11 @@ public:
 	SOCKET hCommSock;
 
 	CString m_send;
+
+	// 上传文件相关
+	CString fileAbsPath;
+	CString uploadName;
+	CFile uploadFile;
+	int nameLength;
+	ULONGLONG fileLength;
 };

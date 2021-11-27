@@ -168,6 +168,8 @@ LRESULT CFileClientDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case FD_READ:			
 			strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
+			state = *(DWORD*)buf;
+			StateHandler();
 			if (strLen <= 0)
 			{
 				if (WSAGetLastError() != WSAEWOULDBLOCK)
@@ -243,6 +245,49 @@ BOOL CFileClientDlg::UploadOnce(const char* buf, int length)
 	return TRUE;
 }
 
+void CFileClientDlg::StateHandler()
+{
+	switch (state)
+	{
+	case 752:
+		send(hCommSock, (char*)&state, sizeof(state), 0);
+		break;
+	case 753:
+		nameLength = uploadName.GetLength();
+		if (UploadOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file name length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		break;
+	case 754:
+		send(hCommSock, (char*)&state, sizeof(state), 0);
+		if (UploadOnce(uploadName.GetBuffer(), uploadName.GetLength()) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file name\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		uploadName.ReleaseBuffer();
+		break;
+	case 755:
+		send(hCommSock, (char*)&state, sizeof(state), 0);
+		fileLength = uploadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
+		if (UploadOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		state = 0;
+		break;
+	}
+}
+
 void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文件夹）
 {
 	//弹出“打开”对话框
@@ -256,9 +301,8 @@ void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文�
 	
 	if (fileDlg.DoModal() == IDOK)
 	{
-		CString fileAbsPath = fileDlg.GetPathName();
-		CString uploadName = fileDlg.GetFileName();
-		CFile uploadFile;
+		fileAbsPath = fileDlg.GetPathName();
+		uploadName = fileDlg.GetFileName();
 		CFileException errFile;
 
 		if (!(uploadFile.Open(fileAbsPath.GetString(),
@@ -272,32 +316,8 @@ void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文�
 			ASSERT(1);
 		}
 
-		send(hCommSock, "upload\0", 7, 0);//发送upload，让服务器进入upload状态
-
-		int nameLength = uploadName.GetLength();
-		if (UploadOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
-		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while sending file name length\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
-		}
-		if (UploadOnce(uploadName.GetBuffer(), uploadName.GetLength()) == FALSE)
-		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while sending file name\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
-		}
-		uploadName.ReleaseBuffer();
-		ULONGLONG fileLength = uploadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
-		if (UploadOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
-		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while sending file length\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
-		}
+		state = 752;//upload状态码
+		StateHandler();
 
 //#define SEND_CHUNK_SIZE 4096
 //
@@ -317,7 +337,7 @@ void CFileClientDlg::OnUpLoad()//上传文件（TODO：暂时不可以下载文�
 //			leftToSend -= readChunkSize;
 //		} while (leftToSend > 0);
 
-		AfxMessageBox((CString)"上传成功！");
+		//AfxMessageBox((CString)"上传成功！");
 	}
 }
 
