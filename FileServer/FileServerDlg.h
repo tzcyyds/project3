@@ -45,7 +45,9 @@ public:
 	afx_msg void OnListen();
 	CString PathtoList(CString path); // 获取指定目录下的文件列表，文件之间用|隔开
 	BOOL RecvOnce(char* buf, int length);// 单次接收内容的函数
-	void CFileServerDlg::StateHandler();
+	void UploadStateHandler();// 上传过程FSM
+	BOOL UploadOnce(const char* buf, int length);// 单次上传内容的函数
+	void DownloadStateHandler();// 上传过程FSM
 	
 	// Socket相关变量
 	UINT m_port_server;
@@ -55,8 +57,18 @@ public:
 
 	CString m_send;
 
-	// 接收上传文件相关变量
+	// 上传和下载通用
 	int nameLength;
-	CString uploadName;
 	ULONGLONG fileLength;
+	CFileException errFile;
+
+	// 上传文件相关
+	CString uploadName;
+	CFile uploadFile;
+	ULONGLONG leftToRecv;
+
+	// 下载文件相关
+	CString downloadName;
+	CFile downloadFile;
+	ULONGLONG leftToSend;
 };

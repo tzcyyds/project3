@@ -25,7 +25,7 @@ CFileServerDlg::CFileServerDlg(CWnd* pParent /*=nullptr*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 	hCommSock = 0;
-	strdirpath = "..\\m_filepath\\*"; //初始化默认路径
+	strdirpath = "..\\m_filepath\\"; //初始化默认路径
 	memset(&clntAdr, 0, sizeof(clntAdr));
 	clntAdrLen = sizeof(clntAdr);
 
@@ -162,20 +162,13 @@ BOOL CFileServerDlg::RecvOnce(char* buf, int length)
 	return TRUE;
 }
 
-void CFileServerDlg::StateHandler()
+void CFileServerDlg::UploadStateHandler()
 {
 	switch (state)
 	{
-	case 752://客户端发送了752，让服务器进入upload状态
+	case 752://收到upload指令
 		state = 753;
-		send(hCommSock, (char*)&state, sizeof(state), 0);
-		if (RecvOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
-		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while receiving file name length\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
-		}
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送753状态（752状态确认）
 		break;
 	case 753://接收文件名长度
 		if (RecvOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
@@ -186,10 +179,10 @@ void CFileServerDlg::StateHandler()
 			ASSERT(errSend != WSAEWOULDBLOCK);
 		}
 		state = 754;
-		send(hCommSock, (char*)&state, sizeof(state), 0);
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送754状态（753状态确认）
 		break;
 	case 754://接收文件名
-		if (RecvOnce(uploadName.GetBuffer(), nameLength) == FALSE)
+		if (RecvOnce(uploadName.GetBuffer(nameLength), nameLength) == FALSE)
 		{
 			DWORD errSend = WSAGetLastError();
 			TRACE("\nError occurred while receiving file name\n"
@@ -197,18 +190,54 @@ void CFileServerDlg::StateHandler()
 			ASSERT(errSend != WSAEWOULDBLOCK);
 		}
 		uploadName.ReleaseBuffer();
+		if (!(uploadFile.Open(strdirpath + uploadName,
+			CFile::modeCreate | CFile::modeWrite | CFile::typeBinary, &errFile)))
+		{
+			char errOpenFile[256];
+			errFile.GetErrorMessage(errOpenFile, 255);
+			TRACE("\nError occurred while receiving file length:\n"
+				"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
+				errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
+			ASSERT(TRUE);
+		}
 		state = 755;
-		send(hCommSock, (char*)&state, sizeof(state), 0);
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送755状态（754状态确认）
 		break;
 	case 755://接收文件长度
 		if (RecvOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
 		{
 			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while receiving file length\n"
+			TRACE("\nError occurred while receiving file chunk\n"
 				"\tGetLastError = %d\n", errSend);
 			ASSERT(errSend != WSAEWOULDBLOCK);
 		}
-		state = 0;
+		leftToRecv = fileLength;
+		state = 756;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送756状态（755状态确认）
+		break;
+	case 756://接收文件（单个chunk）
+#define CHUNK_SIZE 4096
+		char chunkBuf[CHUNK_SIZE] = { 0 };//#define CHUNK_SIZE 4096
+		int writeChunkSize = (leftToRecv < CHUNK_SIZE) ? leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
+		if (RecvOnce(chunkBuf, writeChunkSize) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while receiving file chunks\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		leftToRecv -= writeChunkSize;
+		uploadFile.Write(chunkBuf, writeChunkSize);
+		if (leftToRecv > 0)
+		{
+			state = 756;
+			send(hCommSock, (char*)&state, sizeof(state), 0);//发送756状态（对接收到上一块文件的确认，请求发送下一块）
+		}
+		else
+		{
+			state = 0;
+			send(hCommSock, (char*)&state, sizeof(state), 0);//发送0状态（对文件接收完毕的确认）
+		}
 		break;
 	}
 }
@@ -236,32 +265,39 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			UserName.AddString(inet_ntoa(clntAdr.sin_addr)); // 添加在线用户的IP
 			// 发送默认目录下的文件列表给连接成功的客户端
-			m_send = PathtoList(strdirpath);
+			m_send = PathtoList(strdirpath + '*');
 			strLen = m_send.GetLength();
 			send(hCommSock, m_send, strLen, 0);
 			break;
 		case FD_READ:
-			strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
-			state = *(DWORD*)buf;
-			StateHandler();// 进入状态处理
-			if (strLen <= 0)
+			if (state == 0)
 			{
-				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
+				if (*(DWORD*)buf == 752) state = 752;//接收到upload命令（752状态）
+				if (strLen <= 0)
 				{
-					closesocket(hSocket);
-					MessageBox("recv() failed", "Server", MB_OK);
-					break;
+					if (WSAGetLastError() != WSAEWOULDBLOCK)
+					{
+						closesocket(hSocket);
+						MessageBox("recv() failed", "Server", MB_OK);
+						break;
+					}
+				}
+				else
+				{
+					CString m_recv(buf);
+					if (m_recv.Find("m_filepath") != -1) // 判断如果是默认目录，则不能返回上一级
+					{
+						m_send = PathtoList(m_recv); // 发送该目录下的文件列表给客户端
+						strLen = m_send.GetLength();
+						send(hCommSock, m_send, strLen, 0);
+						strdirpath = m_recv.Left(m_recv.GetLength() - 1);// 让服务器用strdirpath记住用户正在看的目录（TODO：）
+					}
 				}
 			}
-			else
+			if (state >= 752 && state <= 756)
 			{
-				CString m_recv(buf);
-				if (m_recv.Find("m_filepath") != -1) // 判断如果是默认目录，则不能返回上一级
-				{
-					m_send = PathtoList(m_recv); // 发送该目录下的文件列表给客户端
-					strLen = m_send.GetLength();
-					send(hCommSock, m_send, strLen, 0);
-				}
+				UploadStateHandler();
 			}
 			break;
 		case FD_CLOSE:
