@@ -32,6 +32,7 @@ CFileServerDlg::CFileServerDlg(CWnd* pParent /*=nullptr*/)
 	clntAdrLen = sizeof(clntAdr);
 
 	state = 0;
+	count = 0;
 }
 
 
@@ -156,7 +157,7 @@ BOOL CFileServerDlg::RecvOnce(char* buf, int length)
 	int bytesRecv = 0;
 	int WSAECount = 0;
 
-	do//单次接收
+	do// 单次接收
 	{
 		char* recvBuf = buf + length - leftToRecv;
 		bytesRecv = recv(hCommSock, recvBuf, leftToRecv, 0);

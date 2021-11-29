@@ -32,6 +32,7 @@ CFileClientDlg::CFileClientDlg(CWnd* pParent /*=nullptr*/)
 	strdirpath = ""; //初始化默认路径
 
 	state = 0;
+	count = 0;
 }
 
 
@@ -247,7 +248,7 @@ BOOL CFileClientDlg::RecvOnce(char* buf, int length)
 	int bytesRecv = 0;
 	int WSAECount = 0;
 
-	do//单次接收
+	do// 单次接收
 	{
 		char* recvBuf = buf + length - leftToRecv;
 		bytesRecv = recv(hCommSock, recvBuf, leftToRecv, 0);
@@ -256,7 +257,7 @@ BOOL CFileClientDlg::RecvOnce(char* buf, int length)
 			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
 			bytesRecv = 0;
 			WSAECount++;
-			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
+			//if (WSAECount > MAX_WSAE_TIMES) return FALSE;
 		}
 		leftToRecv -= bytesRecv;
 	} while (leftToRecv > 0);

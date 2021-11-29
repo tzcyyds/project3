@@ -76,4 +76,6 @@ public:
 
 	// 删除文件相关
 	CString deleteName;
+
+	int count;
 };
