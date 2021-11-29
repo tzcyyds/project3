@@ -34,7 +34,9 @@ protected:
 
 public:
 	CString strdirpath; // 文件路径
+	DWORD state;// 状态记录
 
+	// 控件变量
 	CEdit ServerPort;
 	CButton ServerListen;
 	CButton ServerStop;
@@ -42,15 +44,31 @@ public:
 
 	afx_msg void OnListen();
 	CString PathtoList(CString path); // 获取指定目录下的文件列表，文件之间用|隔开
+	BOOL RecvOnce(char* buf, int length);// 单次接收内容的函数
+	void UploadStateHandler();// 上传过程FSM
+	BOOL UploadOnce(const char* buf, int length);// 单次上传内容的函数
+	void DownloadStateHandler();// 上传过程FSM
 	
 	// Socket相关变量
-	DWORD m_ip;
 	UINT m_port_server;
-	UINT m_port_client;
 	SOCKET hCommSock;
 	SOCKADDR_IN clntAdr;
-	int clntAdrLen;	
+	int clntAdrLen;
 
 	CString m_send;
-	
+
+	// 上传和下载通用
+	int nameLength;
+	ULONGLONG fileLength;
+	CFileException errFile;
+
+	// 上传文件相关
+	CString uploadName;
+	CFile uploadFile;
+	ULONGLONG leftToRecv;
+
+	// 下载文件相关
+	CString downloadName;
+	CFile downloadFile;
+	ULONGLONG leftToSend;
 };
