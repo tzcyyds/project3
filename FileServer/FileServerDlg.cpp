@@ -12,8 +12,10 @@
 #define new DEBUG_NEW
 #endif
 
-#define WM_SOCK WM_USER + 1 //自定义消息，在WM_USER的基础上进行
+#define WM_SOCK WM_USER + 1// 自定义消息，在WM_USER的基础上进行
 #define MAX_BUF_SIZE 128
+#define CHUNK_SIZE 4096
+#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
 
 // CFileServerDlg 对话框
 
@@ -32,6 +34,7 @@ CFileServerDlg::CFileServerDlg(CWnd* pParent /*=nullptr*/)
 	state = 0;
 }
 
+
 void CFileServerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
@@ -45,6 +48,7 @@ void CFileServerDlg::DoDataExchange(CDataExchange* pDX)
 	// 变量类
 	DDX_Text(pDX, IDC_PORT, m_port_server);
 }
+
 
 BEGIN_MESSAGE_MAP(CFileServerDlg, CDialogEx)
 	ON_WM_PAINT()
@@ -105,7 +109,6 @@ HCURSOR CFileServerDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
 void CFileServerDlg::OnListen() // 监听
 {
 	ServerPort.EnableWindow(FALSE);
@@ -146,21 +149,30 @@ void CFileServerDlg::OnListen() // 监听
 	}
 }
 
+
 BOOL CFileServerDlg::RecvOnce(char* buf, int length)
 {
 	int leftToRecv = length;
 	int bytesRecv = 0;
+	int WSAECount = 0;
 
 	do//单次接收
 	{
 		char* recvBuf = buf + length - leftToRecv;
 		bytesRecv = recv(hCommSock, recvBuf, leftToRecv, 0);
-		if (bytesRecv == SOCKET_ERROR) return FALSE;
+		if (bytesRecv == SOCKET_ERROR)
+		{
+			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
+			bytesRecv = 0;
+			WSAECount++;
+			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
+		}
 		leftToRecv -= bytesRecv;
 	} while (leftToRecv > 0);
 
 	return TRUE;
 }
+
 
 void CFileServerDlg::UploadStateHandler()
 {
@@ -195,10 +207,10 @@ void CFileServerDlg::UploadStateHandler()
 		{
 			char errOpenFile[256];
 			errFile.GetErrorMessage(errOpenFile, 255);
-			TRACE("\nError occurred while receiving file length:\n"
+			TRACE("\nError occurred while opening file:\n"
 				"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
 				errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
-			ASSERT(TRUE);
+			ASSERT(FALSE);
 		}
 		state = 755;
 		send(hCommSock, (char*)&state, sizeof(state), 0);//发送755状态（754状态确认）
@@ -207,7 +219,7 @@ void CFileServerDlg::UploadStateHandler()
 		if (RecvOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
 		{
 			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while receiving file chunk\n"
+			TRACE("\nError occurred while receiving file length\n"
 				"\tGetLastError = %d\n", errSend);
 			ASSERT(errSend != WSAEWOULDBLOCK);
 		}
@@ -216,7 +228,6 @@ void CFileServerDlg::UploadStateHandler()
 		send(hCommSock, (char*)&state, sizeof(state), 0);//发送756状态（755状态确认）
 		break;
 	case 756://接收文件（单个chunk）
-#define CHUNK_SIZE 4096
 		char chunkBuf[CHUNK_SIZE] = { 0 };//#define CHUNK_SIZE 4096
 		int writeChunkSize = (leftToRecv < CHUNK_SIZE) ? leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
 		if (RecvOnce(chunkBuf, writeChunkSize) == FALSE)
@@ -237,10 +248,150 @@ void CFileServerDlg::UploadStateHandler()
 		{
 			state = 0;
 			send(hCommSock, (char*)&state, sizeof(state), 0);//发送0状态（对文件接收完毕的确认）
+			uploadFile.Close();
 		}
 		break;
 	}
 }
+
+
+BOOL CFileServerDlg::UploadOnce(const char* buf, int length)
+{
+	int leftToSend = length;
+	int bytesSend = 0;
+	int WSAECount = 0;
+
+	do// 单次发送
+	{
+		const char* sendBuf = buf + length - leftToSend;
+		bytesSend = send(hCommSock, sendBuf, leftToSend, 0);
+		if (bytesSend == SOCKET_ERROR)
+		{
+			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
+			bytesSend = 0;
+			WSAECount++;
+			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
+		}
+		leftToSend -= bytesSend;
+	} while (leftToSend > 0);
+
+	return TRUE;
+}
+
+
+void CFileServerDlg::DownloadStateHandler()
+{
+	switch (state)
+	{
+	case 209://收到download指令
+		state = 210;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送210状态（209状态确认）
+		break;
+	case 210://接收要下载的文件名长度
+		if (RecvOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while receiving file name length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		state = 211;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送211状态（210状态确认）
+		break;
+	case 211://接收要下载的文件名
+		if (RecvOnce(downloadName.GetBuffer(nameLength), nameLength) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while receiving file name\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		downloadName.ReleaseBuffer();
+		if (!(downloadFile.Open(strdirpath + downloadName,
+			CFile::modeRead | CFile::typeBinary, &errFile)))
+		{
+			char errOpenFile[256];
+			errFile.GetErrorMessage(errOpenFile, 255);
+			TRACE("\nError occurred while opening file:\n"
+				"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
+				errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
+			ASSERT(FALSE);
+		}
+		state = 212;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送212状态（211状态确认）
+		break;
+	case 212://这个状态没有任何用处，写在这里用来占位（或理解为此时的发送方变成了服务器）
+		break;
+	case 213://收到213状态（212状态确认），发送下载的文件长度
+		fileLength = downloadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
+		leftToSend = fileLength;
+		if (UploadOnce((char*)&fileLength, sizeof(fileLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while sending file length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		break;
+	case 214://收到214状态（213状态确认），发送文件（一个chunk）
+		if (leftToSend > 0)
+		{
+			char chunkBuf[CHUNK_SIZE] = { 0 };//#define CHUNK_SIZE 4096
+			int readChunkSize = downloadFile.Read(chunkBuf, CHUNK_SIZE);//#define CHUNK_SIZE 4096
+			if (UploadOnce(chunkBuf, readChunkSize) == FALSE)
+			{
+				DWORD errSend = WSAGetLastError();
+				TRACE("\nError occurred while sending file chunks\n"
+					"\tGetLastError = %d\n", errSend);
+				ASSERT(errSend != WSAEWOULDBLOCK);
+			}
+			leftToSend -= readChunkSize;
+		}
+		break;
+	}
+}
+
+
+void CFileServerDlg::DeleteStateHandler()
+{
+	switch (state)
+	{
+	case 15687://收到delete指令
+		state = 15688;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送15688状态（15687状态确认）
+		break;
+	case 15688://接收要删除的文件名长度
+		if (RecvOnce((char*)&nameLength, sizeof(nameLength)) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while receiving file name length\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		state = 15689;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送15689状态（15688状态确认）
+		break;
+	case 15689://接收要删除的文件名
+		if (RecvOnce(deleteName.GetBuffer(nameLength), nameLength) == FALSE)
+		{
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while receiving file name\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		deleteName.ReleaseBuffer(nameLength);
+		if (remove(strdirpath + deleteName) == -1)
+		{
+			TRACE("\nError occurred while deleting file:\n"
+				"\tFile name: %s\n", deleteName);
+			ASSERT(FALSE);
+		}
+		state = 0;
+		send(hCommSock, (char*)&state, sizeof(state), 0);//发送0状态（对文件已删除的确认）
+		break;
+	}
+}
+
 
 LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -274,6 +425,8 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);
 				if (*(DWORD*)buf == 752) state = 752;//接收到upload命令（752状态）
+				else if (*(DWORD*)buf == 209) state = 209;//接收到download命令（209状态）
+				else if (*(DWORD*)buf == 15687) state = 15687;//接收到delete命令（15687状态）
 				if (strLen <= 0)
 				{
 					if (WSAGetLastError() != WSAEWOULDBLOCK)
@@ -295,7 +448,27 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 					}
 				}
 			}
-			if (state >= 752 && state <= 756)
+			if (state >= 212 && state <= 214)//下载过程（后半部分，向客户端发送文件块），########最优先########
+			{
+				recv(hSocket, (char*)&state, sizeof(state), 0);//接收下一状态（前一状态确认）
+				if (state == 0)
+				{
+					downloadFile.Close();
+				}
+				else
+				{
+					DownloadStateHandler();
+				}
+			}
+			else if (state >= 15687 && state <= 15689)//删除过程
+			{
+				DeleteStateHandler();
+			}
+			else if (state >= 209 && state <= 211)//下载过程（前半部分，接收文件名长度和文件名）
+			{
+				DownloadStateHandler();
+			}
+			else if (state >= 752 && state <= 756)//上传过程（接收客户端发送的数据）
 			{
 				UploadStateHandler();
 			}
@@ -308,6 +481,7 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return CDialog::WindowProc(message, wParam, lParam);
 }
+
 
 CString CFileServerDlg::PathtoList(CString path) // 获取指定目录下的文件列表，文件之间用|隔开
 {

@@ -48,6 +48,8 @@ public:
 	void UploadStateHandler();// 上传过程FSM
 	BOOL UploadOnce(const char* buf, int length);// 单次上传内容的函数
 	void DownloadStateHandler();// 上传过程FSM
+
+	void DeleteStateHandler();// 下载过程FSM
 	
 	// Socket相关变量
 	UINT m_port_server;
@@ -57,7 +59,7 @@ public:
 
 	CString m_send;
 
-	// 上传和下载通用
+	// 上传、下载和删除通用
 	int nameLength;
 	ULONGLONG fileLength;
 	CFileException errFile;
@@ -71,4 +73,7 @@ public:
 	CString downloadName;
 	CFile downloadFile;
 	ULONGLONG leftToSend;
+
+	// 删除文件相关
+	CString deleteName;
 };
