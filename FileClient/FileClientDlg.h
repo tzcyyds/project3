@@ -65,6 +65,8 @@ public:
 	BOOL RecvOnce(char* buf, int length);// 单次接收内容的函数
 	void DownloadStateHandler();// 上传过程FSM
 
+	void DeleteStateHandler();// 删除过程FSM
+
 	// Socket相关变量
 	DWORD m_ip;
 	UINT m_port_client;
@@ -74,9 +76,10 @@ public:
 
 	CString m_send;
 
-	// 上传和下载通用
+	// 上传、下载和删除通用
 	int nameLength;
 	ULONGLONG fileLength;
+	CFileException errFile;
 
 	// 上传文件相关
 	CString uploadName;
@@ -87,4 +90,7 @@ public:
 	CString downloadName;
 	CFile downloadFile;
 	ULONGLONG leftToRecv;
+
+	// 删除文件相关
+	CString deleteName;
 };
