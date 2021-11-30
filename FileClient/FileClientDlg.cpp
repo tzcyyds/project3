@@ -257,7 +257,7 @@ BOOL CFileClientDlg::RecvOnce(char* buf, int length)
 			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
 			bytesRecv = 0;
 			WSAECount++;
-			//if (WSAECount > MAX_WSAE_TIMES) return FALSE;
+			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
 		}
 		leftToRecv -= bytesRecv;
 	} while (leftToRecv > 0);
@@ -306,7 +306,14 @@ void CFileClientDlg::DownloadStateHandler()
 			ASSERT(errSend != WSAEWOULDBLOCK);
 		}
 		leftToRecv = fileLength;
-		state = 214;
+		if (leftToRecv > 0)
+		{
+			state = 214;
+		}
+		else
+		{
+			state = 0;
+		}
 		send(hCommSock, (char*)&state, sizeof(state), 0);//发送214状态（213状态确认）
 		break;
 	case 214://接收文件（单个chunk）
@@ -330,7 +337,6 @@ void CFileClientDlg::DownloadStateHandler()
 		{
 			state = 0;
 			send(hCommSock, (char*)&state, sizeof(state), 0);//发送0状态（对文件接收完毕的确认）
-			downloadFile.Close();
 		}
 		break;
 	}
@@ -407,6 +413,7 @@ LRESULT CFileClientDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					uploadFile.Close();
 					FileName.AddString(uploadName);
+					uploadName.Empty();
 					AfxMessageBox((CString)"上传成功！");
 				}
 				else
@@ -425,6 +432,7 @@ LRESULT CFileClientDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				if (state == 0)
 				{
 					FileName.DeleteString(FileName.FindStringExact(-1, deleteName));
+					deleteName.Empty();
 					AfxMessageBox((CString)"删除成功！");
 				}
 				else
@@ -437,6 +445,8 @@ LRESULT CFileClientDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				DownloadStateHandler();
 				if (state == 0)
 				{
+					downloadFile.Close();
+					uploadName.Empty();
 					AfxMessageBox((CString)"下载成功！");
 				}
 			}

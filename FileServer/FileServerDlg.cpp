@@ -225,7 +225,14 @@ void CFileServerDlg::UploadStateHandler()
 			ASSERT(errSend != WSAEWOULDBLOCK);
 		}
 		leftToRecv = fileLength;
-		state = 756;
+		if (leftToRecv > 0)
+		{
+			state = 756;
+		}
+		else
+		{
+			state = 0;
+		}
 		send(hCommSock, (char*)&state, sizeof(state), 0);//发送756状态（755状态确认）
 		break;
 	case 756://接收文件（单个chunk）
@@ -249,7 +256,6 @@ void CFileServerDlg::UploadStateHandler()
 		{
 			state = 0;
 			send(hCommSock, (char*)&state, sizeof(state), 0);//发送0状态（对文件接收完毕的确认）
-			uploadFile.Close();
 		}
 		break;
 	}
@@ -454,6 +460,7 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				recv(hSocket, (char*)&state, sizeof(state), 0);//接收下一状态（前一状态确认）
 				if (state == 0)
 				{
+					downloadName.Empty();
 					downloadFile.Close();
 				}
 				else
@@ -464,6 +471,10 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			else if (state >= 15687 && state <= 15689)//删除过程
 			{
 				DeleteStateHandler();
+				if (state == 0)
+				{
+					deleteName.Empty();
+				}
 			}
 			else if (state >= 209 && state <= 211)//下载过程（前半部分，接收文件名长度和文件名）
 			{
@@ -472,6 +483,11 @@ LRESULT CFileServerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			else if (state >= 752 && state <= 756)//上传过程（接收客户端发送的数据）
 			{
 				UploadStateHandler();
+				if (state == 0)
+				{
+					uploadFile.Close();
+					uploadName.Empty();
+				}
 			}
 			break;
 		case FD_CLOSE:
