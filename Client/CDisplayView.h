@@ -45,6 +45,7 @@ public:
 	int client_state;
 	SOCKET hCommSock;
 	SOCKADDR_IN servAdr;
+	afx_msg void OnLbnSelchangeList1();
 };
 
 

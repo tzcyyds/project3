@@ -62,13 +62,15 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 	else
 	{
 		u_int event= recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_int packet_len = ntohs(*(u_short*)temp);
 		//提取事件号
 		switch (event)
 		{
 		case 2://收到质询报文
 		{
-			u_int num_N = recvbuf[1];
-			char* temp = &recvbuf[2];
+			u_int num_N = recvbuf[3];
+			char* temp = &recvbuf[4];
 
 			u_int password_value = 0;
 			u_int password_len = pView->m_password.GetLength();//只有点击连接时，才会刷新用户名和密码，此时一定可以获取到上次正确的密码
@@ -81,7 +83,7 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 				for (size_t i = 0; i < num_N; i++)
 				{
 					//这两行待修改
-					correct_sum += ntohs(*(u_short*)temp);;
+					correct_sum += ntohs(*(u_short*)temp);
 					temp = temp + 2;
 				}
 
@@ -94,8 +96,9 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 					
 					sendbuf[0] = 3;//填写事件号
 					temp = &sendbuf[1];
+					*(u_short*)temp = htons(5);
 					*(u_short*)temp = htons(correct_result);//写入赋值，挺复杂的写法
-					send(s, sendbuf, 4, 0);
+					send(s, sendbuf, 5, 0);
 					TRACE("respond challenge");
 					pView->client_state = 2;//状态转换，已返回质询结果，等待确认
 				}
@@ -135,10 +138,12 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 	else
 	{
 		int event = recvbuf[0];
+		char* pkt_temp = &recvbuf[1];
+		u_int packet_len = ntohs(*(u_short*)pkt_temp);
 		switch (event)
 		{
 		case 4://认证结果报文
-			temp = recvbuf[1];
+			temp = recvbuf[3];
 			if (temp == 1)//认证成功
 			{
 				pView->client_state = 3;//认证成功，进入等待操作状态
@@ -154,6 +159,48 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 		}
 	}
 }
+
+void CClientDoc::socket_state3_fsm(SOCKET s)
+{
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	int temp = 0;
+	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
+	if (strLen <= 0)
+	{
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
+	}
+	else
+	{
+		int event = recvbuf[0];
+		char* pkt_temp = &recvbuf[1];
+		u_int packet_len = ntohs(*(u_short*)pkt_temp);
+		switch (event)
+		{
+		case 4://认证结果报文
+			temp = recvbuf[3];
+			if (temp == 1)//认证成功
+			{
+				pView->client_state = 3;//认证成功，进入等待操作状态
+				TRACE("认证成功");
+			}
+			else
+			{
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 
 BOOL CClientDoc::OnNewDocument()
 {
