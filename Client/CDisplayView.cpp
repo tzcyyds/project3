@@ -47,7 +47,11 @@ void CDisplayView::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CDisplayView, CFormView)
 	ON_BN_CLICKED(IDC_CONNECT, &CDisplayView::OnBnClickedConnect)
 	ON_BN_CLICKED(IDC_DISCONNECT, &CDisplayView::OnBnClickedDisconnect)
-	ON_LBN_SELCHANGE(IDC_LIST1, &CDisplayView::OnLbnSelchangeList1)
+	ON_BN_CLICKED(IDC_ENTERDIR, &CDisplayView::OnBnClickedEnterdir)
+	ON_BN_CLICKED(IDC_GOBACK, &CDisplayView::OnBnClickedGoback)
+	ON_BN_CLICKED(IDC_UPLOAD, &CDisplayView::OnBnClickedUpload)
+	ON_BN_CLICKED(IDC_DOWNLOAD, &CDisplayView::OnBnClickedDownload)
+	ON_BN_CLICKED(IDC_DELETE, &CDisplayView::OnBnClickedDelete)
 END_MESSAGE_MAP()
 
 
@@ -100,7 +104,6 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 			case 3://认证成功了！此时可以交互文件夹及文件相关信息
 				//解析报文，提取事件号，调用不同处理函数
-				pDoc->socket_state3_fsm(hSocket);
 
 				break;
 			default:
@@ -176,11 +179,9 @@ void CDisplayView::OnBnClickedConnect()
 	sendbuf[0] = 1;//填写事件号
 	UpdateData(TRUE);//刷新用户名和密码
 	int strLen = m_user.GetLength();
-	sendbuf[3] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
-	memcpy(sendbuf + 4, m_user, strLen);//填写用户名字符串
-	char* temp = &sendbuf[1];
-	*(u_short*)temp = htons((4 + strLen));
-	send(hCommSock, sendbuf, strLen + 4, 0);
+	sendbuf[1] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
+	memcpy(sendbuf + 2, m_user, strLen);//填写用户名字符串
+	send(hCommSock, sendbuf, strLen + 2, 0);
 	TRACE("send account");
 	client_state = 1;//连接成功,已发送用户名，等待质询
 
@@ -195,7 +196,31 @@ void CDisplayView::OnBnClickedDisconnect()
 }
 
 
-void CDisplayView::OnLbnSelchangeList1()
+void CDisplayView::OnBnClickedEnterdir()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedGoback()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedUpload()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedDownload()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedDelete()
 {
 	// TODO: 在此添加控件通知处理程序代码
 }
