@@ -19,7 +19,12 @@ CDisplayView::CDisplayView()
 	, m_user(_T(""))
 	, m_password(_T(""))
 	,client_state(0)
+	, m_ip(0x7f000001)
+	, m_SPort(9190)
+	, m_LPort(9191)
 {
+	hCommSock = 0;
+	memset(&servAdr, 0, sizeof(servAdr));
 
 }
 
@@ -32,11 +37,16 @@ void CDisplayView::DoDataExchange(CDataExchange* pDX)
 	CFormView::DoDataExchange(pDX);
 	DDX_Text(pDX, IDC_EDIT2, m_user);
 	DDX_Text(pDX, IDC_EDIT3, m_password);
+	DDX_Control(pDX, IDC_LIST1, FileName);
+	DDX_Control(pDX, IDC_IPADDRESS1, ServerIP);
+	DDX_IPAddress(pDX, IDC_IPADDRESS1, m_ip);
+	DDX_Text(pDX, IDC_EDIT4, m_SPort);
+	DDX_Text(pDX, IDC_EDIT5, m_LPort);
 }
 
 BEGIN_MESSAGE_MAP(CDisplayView, CFormView)
-	ON_BN_CLICKED(IDC_BUTTON1, &CDisplayView::OnBnClickedButton1)
-	ON_BN_CLICKED(IDC_BUTTON2, &CDisplayView::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_CONNECT, &CDisplayView::OnBnClickedConnect)
+	ON_BN_CLICKED(IDC_DISCONNECT, &CDisplayView::OnBnClickedDisconnect)
 END_MESSAGE_MAP()
 
 
@@ -87,6 +97,10 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			case 2://等待认证结果
 				pDoc->socket_state2_fsm(hSocket);
 				break;
+			case 3://认证成功了！此时可以交互文件夹及文件相关信息
+				//解析报文，提取事件号，调用不同处理函数
+
+				break;
 			default:
 				break;
 			}
@@ -103,19 +117,32 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 
 
-
-void CDisplayView::OnBnClickedButton1()//连接
+void CDisplayView::OnBnClickedConnect()
 {
-	// TODO: 在此添加控件通知处理程序代码
+	
 	CClientDoc* pDoc = (CClientDoc*)GetDocument();
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
 
-	SOCKET hCommSock;
-	SOCKADDR_IN servAdr;
-	memset(&servAdr, 0, sizeof(servAdr));
+	// 判断异常情况
+	if (m_ip == NULL)
+	{
+		AfxMessageBox((CString)"IP地址为空！");
+		return;
+	}
+	else if (m_SPort == NULL)
+	{
+		AfxMessageBox((CString)"云端端口为空！");
+		return;
+	}
+	else if (m_LPort == NULL)
+	{
+		AfxMessageBox((CString)"本地端口为空！");
+		return;
+	}
+
 	servAdr.sin_family = AF_INET;
-	servAdr.sin_addr.s_addr = htonl(0x7f000001);//127.0.0.1
-	servAdr.sin_port = htons(9190);//服务器端口9190
+	servAdr.sin_addr.s_addr = htonl(m_ip);
+	servAdr.sin_port = htons(m_SPort);
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
@@ -136,7 +163,7 @@ void CDisplayView::OnBnClickedButton1()//连接
 		MessageBox("connect() failed", "Client", MB_OK);
 		exit(1);
 	}
-	client_state = 1;//连接成功，套接字进入连接建立状态
+	
 	if (WSAAsyncSelect(hCommSock, m_hWnd, WM_SOCK, FD_READ | FD_CLOSE) == SOCKET_ERROR)
 	{
 		MessageBox("WSAAsyncSelect() failed", "Client", MB_OK);
@@ -149,18 +176,16 @@ void CDisplayView::OnBnClickedButton1()//连接
 	int strLen = m_user.GetLength();
 	sendbuf[1] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
 	memcpy(sendbuf + 2, m_user, strLen);//填写用户名字符串
-	send(hCommSock, sendbuf, strLen+2, 0);
+	send(hCommSock, sendbuf, strLen + 2, 0);
 	TRACE("send account");
-	
+	client_state = 1;//连接成功,已发送用户名，等待质询
+
 
 
 }
 
 
-void CDisplayView::OnBnClickedButton2()//断开
+void CDisplayView::OnBnClickedDisconnect()
 {
 	// TODO: 在此添加控件通知处理程序代码
 }
-
-
-

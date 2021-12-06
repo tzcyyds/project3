@@ -39,9 +39,7 @@ CFlieserverDoc::CFlieserverDoc() noexcept
 	SetTitle(TEXT("fileserver"));
 	m_UserInfo.initDoc();//本地用户信息
 	m_linkInfo.myMap.clear();//连接-用户名信息
-	m_WaitAcc.myMap.clear();//等待回应
-	m_WaitAns.myMap.clear();//等待回应
-	m_UserOL.myMap.clear();//授权后，正式在线
+	m_Comparison.myMap.clear();
 
 }
 
@@ -49,53 +47,6 @@ CFlieserverDoc::~CFlieserverDoc()
 {
 }
 
-void CFlieserverDoc::BrowseAllFiles(CString filepath, CTreeCtrl* treeCtrl)
-{
-	//检测路径是否正确并添加必要信息
-	if (filepath == _T(""))
-	{
-		return;
-	}
-	else
-	{
-		if (filepath.Right(1) != _T(""))
-		{
-			filepath += _T("\\");
-		}
-		filepath += _T("*.*");
-	}
-
-	//递归枚举文件夹下的内容
-	CFileFind find;
-	CString strpath;
-	CString str_fileName;
-	BOOL IsFind = find.FindFile(filepath);
-	CTreeCtrl* m_TreeCtrl = treeCtrl;
-	while (IsFind)
-	{
-		IsFind = find.FindNextFile();
-		strpath = find.GetFilePath();
-
-		if (!find.IsDirectory() && !find.IsDots())
-		{
-			str_fileName = find.GetFileName();
-			m_TreeCtrl->InsertItem((LPCSTR)str_fileName);
-			//AfxMessageBox(str_fileName);
-		}
-		else if (find.IsDirectory() && !find.IsDots())
-		{
-			str_fileName = find.GetFileName();
-			m_TreeCtrl->InsertItem((LPCSTR)str_fileName);
-			//AfxMessageBox(str_fileName);
-
-			BrowseAllFiles(strpath, m_TreeCtrl);
-		}
-		else
-		{
-			continue;
-		}
-	}
-}
 
 void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int strlen)
 {
@@ -107,68 +58,59 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 	case 0://非法数据
 		break;
 	case 1://用户名到来
-	{
-		int namelen = buf[1];
-		assert(namelen >= 0 && namelen <= MAX_BUF_SIZE);
-		string username(&buf[2], namelen);
-		if (m_UserInfo.myMap.count(username)) 
 		{
-			m_linkInfo.myMap[hSocket].username = username;
-			//准备密码
-			string password;
-			password = m_UserInfo.myMap[username];
-			int t_p = 0;
-			sstream << password;
-			sstream >> t_p;//转换成整数
-			sstream.clear();
-
-			//准备要发送的质询数据，N，N个随机数
-			u_int seed;//保证随机数足够随机
-			seed = (u_int)time(0);
-			srand(seed);
-			constexpr auto MIN_VALUE = 1;
-			constexpr auto MAX_VALUE = 20;
-			u_int num_N = rand() % (MAX_VALUE - MIN_VALUE + 1) + MIN_VALUE;
-
-			sendbuf[0] = 2;//填事件号
-			sendbuf[1] = num_N;//整数个数
-			temp = sendbuf + 2;//指针就位
-
-			u_short correct_sum = 0;//本地计算值
-			u_short correct_result = 0;
-			u_short correct_password = (u_short)t_p;
-			u_short x = 0;//两字节u_short;
-			for (size_t i = 0; i < num_N; i++)
+			int namelen = buf[1];
+			assert(namelen >= 0 && namelen <= MAX_BUF_SIZE);
+			string username(&buf[2], namelen);
+			if (m_UserInfo.myMap.count(username))
 			{
-				x = rand();//最大65535
-				correct_sum += x;
-				x = htons(x);
-				memcpy(temp, &x, 2);
-				temp += 2;
+				m_linkInfo.myMap[hSocket].username = username;
+				//准备密码
+				string password;
+				password = m_UserInfo.myMap[username];
+				int t_p = 0;
+				sstream << password;
+				sstream >> t_p;//转换成整数
+				sstream.clear();
 
-				
+				//准备要发送的质询数据，N，N个随机数
+				u_int seed;//保证随机数足够随机
+				seed = (u_int)time(0);
+				srand(seed);
+				constexpr auto MIN_VALUE = 1;
+				constexpr auto MAX_VALUE = 20;
+				u_int num_N = rand() % (MAX_VALUE - MIN_VALUE + 1) + MIN_VALUE;
+
+				sendbuf[0] = 2;//填事件号
+				sendbuf[1] = num_N;//整数个数
+				temp = sendbuf + 2;//指针就位
+
+				u_short correct_sum = 0;//本地计算值
+				u_short correct_result = 0;
+				u_short correct_password = (u_short)t_p;
+				u_short x = 0;//两字节u_short;
+				for (size_t i = 0; i < num_N; i++)
+				{
+					x = rand();//最大65535
+					correct_sum += x;
+					x = htons(x);
+					memcpy(temp, &x, 2);
+					temp += 2;
+				}
+				send(hSocket, sendbuf, MAX_BUF_SIZE, 0);//发送质询报文
+				correct_result = correct_sum ^ correct_password;//异或
+				m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
+				m_linkInfo.myMap[hSocket].state = 2;//状态转移
+				TRACE("Challenge finish");
 			}
-			send(hSocket, sendbuf, MAX_BUF_SIZE, 0);//发送质询报文
-			correct_result = correct_sum ^ correct_password;//异或
-			m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
-			m_WaitAns.myMap.insert(pair<SOCKET, string>(hSocket, username));//更改状态
-			m_WaitAcc.myMap.erase(hSocket);
-			TRACE("Challenge finish");
-		}
-		else//非法用户
-		{
-
+			else;//非法用户
 		}
 		break;
-	}
 	case 2://质询结果到来,不应到来
-	{
 		break;
-	}
 	default:
 		break;
 	}
-	
 	return;
 }
 
@@ -182,44 +124,33 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 	case 0://非法数据
 		break;
 	case 1://用户名到来，不应到来
-	{
 		break;
-	}
 	case 2://质询结果到来
-	{
-
-		if (m_Comparison.myMap.count(hSocket))
 		{
-			u_short answer = ntohs(*(u_short*)temp);
-			//用完要清空
-			u_short t_result = 0;
-			sstream << m_Comparison.myMap[hSocket];
-			sstream >> t_result;//转换成2字节整数
-			sstream.clear();
-			if (answer == t_result)
+			if (m_Comparison.myMap.count(hSocket))
 			{
-				sendbuf[0] = 4;//填事件号
-				sendbuf[1] = 1;//认证成功
-				send(hSocket, sendbuf, 3, 0);//发送
-				m_UserOL.myMap.insert(pair<SOCKET, string>(hSocket, m_WaitAns.myMap[hSocket]));
-				m_WaitAns.myMap.erase(hSocket);
-				TRACE("user online");
+				u_short answer = ntohs(*(u_short*)temp);
+				//用完要清空
+				u_short t_result = 0;
+				sstream << m_Comparison.myMap[hSocket];
+				sstream >> t_result;//转换成2字节整数
+				sstream.clear();
+				if (answer == t_result)
+				{
+					sendbuf[0] = 4;//填事件号
+					sendbuf[1] = 1;//认证成功
+					send(hSocket, sendbuf, 3, 0);//发送
+					m_linkInfo.myMap[hSocket].state = 3;//进入主状态
+					TRACE("user online");
+				}
+				else TRACE("质询结果错");// 质询结果出错
 			}
-			else// 质询结果出错
-			{
-				TRACE("质询结果错");
-			}
-		}
-		else//非法套接字发送的质询结果
-		{
-			TRACE("非法套接字的质询结果");
+			else TRACE("非法套接字的质询结果");//非法套接字发送的质询结果
 		}
 		break;
-	}
 	default:
 		break;
 	}
-	
 	return;
 }
 

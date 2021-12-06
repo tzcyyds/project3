@@ -5,10 +5,10 @@ using namespace std;
 
 struct myUser
 {
-	//SOCKET s;
 	DWORD ip = 0;
 	WORD port = 0;//WORDµÈÍ¬ÓÚunsigned short
 	string username = "";
+	int state = 0;
 };
 
 class UserDoc {

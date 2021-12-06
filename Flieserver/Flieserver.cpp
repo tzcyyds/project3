@@ -10,7 +10,7 @@
 #include "MainFrm.h"
 
 #include "FlieserverDoc.h"
-#include "FlieserverView.h"
+#include "CDisplayView.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -88,7 +88,7 @@ BOOL CFlieserverApp::InitInstance()
 		IDR_MAINFRAME,
 		RUNTIME_CLASS(CFlieserverDoc),
 		RUNTIME_CLASS(CMainFrame),       // 主 SDI 框架窗口
-		RUNTIME_CLASS(CFlieserverView));
+		RUNTIME_CLASS(CDisplayView));
 	if (!pDocTemplate)
 		return FALSE;
 	AddDocTemplate(pDocTemplate);

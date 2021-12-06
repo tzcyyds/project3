@@ -5,14 +5,10 @@
 #include "pch.h"
 #include "framework.h"
 #include "Flieserver.h"
-#include "FlieserverView.h"
-#include "MainFrm.h"
 
-#include "CFileView.h"
+#include "MainFrm.h"
 #include "CDisplayView.h"
 
-#include "shlwapi.h"
-#pragma comment(lib,"shlwapi.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -61,16 +57,6 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 		return FALSE;
 	// TODO: 在此处通过修改
 	//  CREATESTRUCT cs 来修改窗口类或样式
-
-	return TRUE;
-}
-
-BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
-{
-	m_wndSplitter.CreateStatic(this, 1, 2);
-
-	m_wndSplitter.CreateView(0, 0, RUNTIME_CLASS(CFileView), CSize(300, 500), pContext);
-	m_wndSplitter.CreateView(0, 1, RUNTIME_CLASS(CDisplayView), CSize(600, 500), pContext);
 
 	return TRUE;
 }

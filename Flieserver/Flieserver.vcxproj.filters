@@ -30,9 +30,6 @@
     <ClInclude Include="FlieserverDoc.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="FlieserverView.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -40,9 +37,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CDisplayView.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="CFileView.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="MyUser.h">
@@ -59,16 +53,10 @@
     <ClCompile Include="FlieserverDoc.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="FlieserverView.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CDisplayView.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="CFileView.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MyUser.cpp">

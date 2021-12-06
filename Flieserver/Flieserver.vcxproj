@@ -185,10 +185,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CDisplayView.h" />
-    <ClInclude Include="CFileView.h" />
     <ClInclude Include="Flieserver.h" />
     <ClInclude Include="FlieserverDoc.h" />
-    <ClInclude Include="FlieserverView.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="MyUser.h" />
@@ -198,10 +196,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CDisplayView.cpp" />
-    <ClCompile Include="CFileView.cpp" />
     <ClCompile Include="Flieserver.cpp" />
     <ClCompile Include="FlieserverDoc.cpp" />
-    <ClCompile Include="FlieserverView.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="MyUser.cpp" />
     <ClCompile Include="pch.cpp">

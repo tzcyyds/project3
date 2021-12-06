@@ -97,7 +97,7 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 					*(u_short*)temp = htons(correct_result);//写入赋值，挺复杂的写法
 					send(s, sendbuf, 4, 0);
 					TRACE("respond challenge");
-					pView->client_state = 2;//状态转换
+					pView->client_state = 2;//状态转换，已返回质询结果，等待确认
 				}
 				else//密码长度不对
 				{

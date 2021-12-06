@@ -31,9 +31,20 @@ protected:
 public:
 	CString m_user;
 	CString m_password;
+	
+	CListBox FileName;
+	CIPAddressCtrl ServerIP;
+	DWORD m_ip;
+	afx_msg void OnBnClickedConnect();
+	afx_msg void OnBnClickedDisconnect();
+	// server port
+	UINT m_SPort;
+	// local port
+	UINT m_LPort;
+
 	int client_state;
-	afx_msg void OnBnClickedButton1();
-	afx_msg void OnBnClickedButton2();
+	SOCKET hCommSock;
+	SOCKADDR_IN servAdr;
 };
 
 
