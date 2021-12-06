@@ -47,6 +47,11 @@ void CDisplayView::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CDisplayView, CFormView)
 	ON_BN_CLICKED(IDC_CONNECT, &CDisplayView::OnBnClickedConnect)
 	ON_BN_CLICKED(IDC_DISCONNECT, &CDisplayView::OnBnClickedDisconnect)
+	ON_BN_CLICKED(IDC_ENTERDIR, &CDisplayView::OnBnClickedEnterdir)
+	ON_BN_CLICKED(IDC_GOBACK, &CDisplayView::OnBnClickedGoback)
+	ON_BN_CLICKED(IDC_UPLOAD, &CDisplayView::OnBnClickedUpload)
+	ON_BN_CLICKED(IDC_DOWNLOAD, &CDisplayView::OnBnClickedDownload)
+	ON_BN_CLICKED(IDC_DELETE, &CDisplayView::OnBnClickedDelete)
 END_MESSAGE_MAP()
 
 
@@ -189,6 +194,36 @@ void CDisplayView::OnBnClickedConnect()
 
 
 void CDisplayView::OnBnClickedDisconnect()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedEnterdir()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedGoback()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedUpload()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedDownload()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CDisplayView::OnBnClickedDelete()
 {
 	// TODO: 在此添加控件通知处理程序代码
 }

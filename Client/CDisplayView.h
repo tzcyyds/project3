@@ -45,6 +45,11 @@ public:
 	int client_state;
 	SOCKET hCommSock;
 	SOCKADDR_IN servAdr;
+	afx_msg void OnBnClickedEnterdir();
+	afx_msg void OnBnClickedGoback();
+	afx_msg void OnBnClickedUpload();
+	afx_msg void OnBnClickedDownload();
+	afx_msg void OnBnClickedDelete();
 };
 
 
