@@ -13,7 +13,7 @@
 #include "FlieserverDoc.h"
 #include <propkey.h>
 #include <sstream>
-//#include <cstdlib>
+
 constexpr auto MAX_BUF_SIZE = 128;
 
 using namespace std;
@@ -152,6 +152,26 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 		break;
 	}
 	return;
+}
+
+void CFlieserverDoc::MainStateproc(SOCKET hSocket, int event, char* buf, int strlen)
+{
+
+}
+
+void CFlieserverDoc::Recvfile(SOCKET hSocket, int event, char* buf, int strlen)
+{
+
+}
+
+void CFlieserverDoc::WaitUpload(SOCKET hSocket, int event, char* buf, int strlen)
+{
+
+}
+
+void CFlieserverDoc::WaitAck(SOCKET hSocket, int event, char* buf, int strlen)
+{
+
 }
 
 BOOL CFlieserverDoc::OnNewDocument()

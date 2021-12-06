@@ -104,27 +104,15 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case FD_READ:
 			{
-				//首先解析报文
-				strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);//待修改，应先接受指定长度的报文
+				//首先提取事件号
+				strLen = recv(hSocket, buf, MAX_BUF_SIZE, 0);//待修改，应先接收两个字节
 				if (strLen <= 0)
 				{
 
 					break;
 				}
-				int event = 0;
-				//数据的分类处理，提取事件号
-				if ((int)buf[0] == 1)
-				{
-					event = 1;//用户名到来
-				}
-				else if ((int)buf[0] == 3)
-				{
-					event = 2;//质询结果到来
-				}
-				else//其它数据
-				{
+				int event = (int)buf[0];
 
-				}
 				//设定状态
 				int m_state = pDoc->m_linkInfo.myMap[hSocket].state;
 				//switch 根据状态
@@ -142,12 +130,21 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 					break;
 				case 3:
 					//用户已在线，等待其它指令。
+					pDoc->MainStateproc(hSocket, event, buf, strLen);//调用主状态处理函数
 					break;
 				case 4:
-
+					//在接收上传文件数据状态，接收数据
+					pDoc->Recvfile(hSocket, event, buf, strLen);
+					break;
+				case 5:
+					//已收到下载命令，等待开始传输
+					pDoc->WaitUpload(hSocket, event, buf, strLen);
+					break;
+				case 6:
+					//等待下载数据确认
+					pDoc->WaitAck(hSocket, event, buf, strLen);
 					break;
 				default:
-
 					break;
 				}
 			}

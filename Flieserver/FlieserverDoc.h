@@ -19,6 +19,11 @@ public:
 public:
 	void fsm_Challenge(SOCKET hSocket,int event,char* buf, int strlen);
 	void fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen);
+	void MainStateproc(SOCKET hSocket, int event, char* buf, int strlen);
+	void Recvfile(SOCKET hSocket, int event, char* buf, int strlen);
+	void WaitUpload(SOCKET hSocket, int event, char* buf, int strlen);
+	void WaitAck(SOCKET hSocket, int event, char* buf, int strlen);
+
 // 重写
 public:
 	virtual BOOL OnNewDocument();
