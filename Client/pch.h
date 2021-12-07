@@ -9,5 +9,8 @@
 
 // 添加要在此处预编译的标头
 #include "framework.h"
-
+#include <afxinet.h>
+#include "afxwin.h"
+#include <string>
+#include <vector>
 #endif //PCH_H

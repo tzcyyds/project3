@@ -19,6 +19,8 @@
 #endif
 #include "CDisplayView.h"
 
+#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
+#define CHUNK_SIZE 4096
 constexpr auto MAX_BUF_SIZE = 100;
 // CClientDoc
 
@@ -121,12 +123,13 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 
 void CClientDoc::socket_state2_fsm(SOCKET s)
 {
-	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
 	int temp = 0;
 	CDisplayView* pView;
 	POSITION pos = GetFirstViewPosition();
 	pView = (CDisplayView*)GetNextView(pos);
-	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
+	int strLen = recv(s, recvbuf, 3, 0);
 	if (strLen <= 0)
 	{
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
@@ -139,21 +142,29 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 	{
 		int event = recvbuf[0];
 		char* pkt_temp = &recvbuf[1];
-		u_int packet_len = ntohs(*(u_short*)pkt_temp);
+		u_short packet_len = ntohs(*(u_short*)pkt_temp);
 		switch (event)
 		{
-		case 4://认证结果报文
-			temp = recvbuf[3];
-			if (temp == 1)//认证成功
+		case 4: {//认证结果报文
+			if (pView->RecvOnce(chunk_recv_buf, packet_len - 3) == FALSE)
 			{
-				pView->client_state = 3;//认证成功，进入等待操作状态
-				TRACE("认证成功");
+				DWORD errSend = WSAGetLastError();
+				TRACE("\nError occurred while receiving file chunks\n"
+					"\tGetLastError = %d\n", errSend);
+				ASSERT(errSend != WSAEWOULDBLOCK);
 			}
-			else
-			{
+			char* pkt_temp = chunk_recv_buf;
+			if (*(char*)pkt_temp == 1) {
+				pkt_temp = pkt_temp + 1;
+				CString recvdialog(pkt_temp);
+				pView->UpdateDir(recvdialog);
+				pView->client_state = 3;
 				break;
 			}
-			break;
+			else {
+				//认证失败
+			}
+		}
 		default:
 			break;
 		}
@@ -162,37 +173,360 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 
 void CClientDoc::socket_state3_fsm(SOCKET s)
 {
-	char recvbuf[MAX_BUF_SIZE] = { 0 };
-	int temp = 0;
+
+}
+
+void CClientDoc::socket_state4_fsm(SOCKET s)
+{
 	CDisplayView* pView;
-	POSITION pos = GetFirstViewPosition();
-	pView = (CDisplayView*)GetNextView(pos);
-	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
-	if (strLen <= 0)
-	{
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
+	char chunk_send_buf[CHUNK_SIZE] = { 0 };
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen <= 0) {
 		if (WSAGetLastError() != WSAEWOULDBLOCK)
 		{
 			closesocket(s);
 			return;
 		}
 	}
-	else
-	{
-		int event = recvbuf[0];
-		char* pkt_temp = &recvbuf[1];
-		u_int packet_len = ntohs(*(u_short*)pkt_temp);
+	else {
+		if (strLen != 3) {
+			printf("state4 not receive enough data!!!/n");
+		}
+		u_int event = recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_short pkt_len = ntohs(*(u_short*)temp);
 		switch (event)
 		{
-		case 4://认证结果报文
-			temp = recvbuf[3];
-			if (temp == 1)//认证成功
-			{
-				pView->client_state = 3;//认证成功，进入等待操作状态
-				TRACE("认证成功");
+		case 16://收到回应上传请求
+			strLen = recv(s, chunk_recv_buf, (pkt_len - 3), 0);
+			if (strLen <= 0) {
+				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				{
+					closesocket(s);
+					return;
+				}
 			}
-			else
+			else {
+				u_int upload_permission = chunk_recv_buf[0];
+				if (upload_permission == 1) {
+					if (pView->leftToSend > 0)
+					{
+						int readChunkSize = pView->uploadFile.Read(chunk_send_buf+6, CHUNK_SIZE-6);
+						temp = chunk_send_buf;
+						*(char*)temp = 7;
+						temp = temp + 1;
+						*(u_short*)temp = 6 + (u_short)readChunkSize;
+						temp = temp + 2;
+						pView->sequence = 0;
+						*(char*)temp = pView->sequence;
+						temp = temp + 1;
+						*(u_short*)temp = (u_short)readChunkSize;
+
+						if (pView->UploadOnce(chunk_send_buf, readChunkSize+6) == FALSE)
+						{
+							DWORD errSend = WSAGetLastError();
+							TRACE("\nError occurred while sending file chunks\n"
+								"\tGetLastError = %d\n", errSend);
+							ASSERT(errSend != WSAEWOULDBLOCK);
+						}
+						memcpy(pView->databuf, chunk_send_buf, readChunkSize + 6);
+						pView->databuf_size = readChunkSize + 6;
+						pView->leftToSend -= readChunkSize;
+					}
+					pView->client_state = 5;
+				}
+				else {
+					
+				}
+			}
+
+			break;
+		default:
+			break;
+		}
+	}
+
+
+}
+
+void CClientDoc::socket_state5_fsm(SOCKET s)
+{
+	CDisplayView* pView;
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
+	char chunk_send_buf[CHUNK_SIZE] = { 0 };
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen <= 0) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
+	}
+	else {
+		if (strLen != 3) {
+			printf("state5 not receive enough data!!!/n");
+		}
+		u_int event = recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_short pkt_len = ntohs(*(u_short*)temp);
+		switch (event)
+		{
+		case 8://收到正确确认
+			strLen = recv(s, chunk_recv_buf, (pkt_len - 3), 0);
+			if (strLen <= 0) {
+				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				{
+					closesocket(s);
+					return;
+				}
+			}
+			else {
+				if (chunk_recv_buf[0] == pView->sequence) {
+					memset(pView->databuf, 0, pView->databuf_size);//释放缓存
+					if (pView->leftToSend > 0)
+					{
+						int readChunkSize = pView->uploadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);
+						temp = chunk_send_buf;
+						*(char*)temp = 7;
+						temp = temp + 1;
+						*(u_short*)temp = 6 + (u_short)readChunkSize;
+						temp = temp + 2;
+						pView->sequence ^= 0x01;//取反，0变1，1变0
+						*(char*)temp = pView->sequence;
+						temp = temp + 1;
+						*(u_short*)temp = (u_short)readChunkSize;
+
+						if (pView->UploadOnce(chunk_send_buf, readChunkSize + 6) == FALSE)
+						{
+							DWORD errSend = WSAGetLastError();
+							TRACE("\nError occurred while sending file chunks\n"
+								"\tGetLastError = %d\n", errSend);
+							ASSERT(errSend != WSAEWOULDBLOCK);
+						}
+						pView->leftToSend -= readChunkSize;
+						pView->client_state = 5;
+					}
+					else if (pView->leftToSend == 0) {
+						printf("Upload finished! Total bytes:%lld\n", pView->fileLength);
+						pView->client_state = 3;
+					}
+					else {
+						printf("leftToSend error!!!/n");
+					}
+				}
+				else {
+					//报文序号错误，不予发送下一个
+				}
+			}
+			break;
+		case 9://收到重传确认
+			strLen = recv(s, chunk_recv_buf, (pkt_len - 3), 0);
+			if (strLen <= 0) {
+				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				{
+					closesocket(s);
+					return;
+				}
+			}
+			else {
+				if (chunk_recv_buf[0] == pView->sequence) {
+					char* temp = pView->databuf;
+					temp = temp + 3;
+					pView->sequence ^= 0x01;//序号递增
+					*(char*)temp = pView->sequence;
+
+					if (pView->UploadOnce(pView->databuf, pView->databuf_size) == FALSE)
+					{
+						DWORD errSend = WSAGetLastError();
+						TRACE("\nError occurred while sending file chunks\n"
+							"\tGetLastError = %d\n", errSend);
+						ASSERT(errSend != WSAEWOULDBLOCK);
+					}
+					pView->client_state = 5;
+				}
+				else {
+					//报文序号错误，不予发送下一个
+				}
+			}
+
+			break;
+		default:
+			break;
+		}
+	}
+
+}
+
+void CClientDoc::socket_state6_fsm(SOCKET s)
+{
+	CDisplayView* pView;
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
+	char chunk_send_buf[CHUNK_SIZE] = { 0 };
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen <= 0) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
+	}
+	else {
+		if (strLen != 3) {
+			printf("state6 not receive enough data!!!/n");
+		}
+		u_int event = recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_short pkt_len = ntohs(*(u_short*)temp);
+		switch (event)
+		{
+		case 12://收到回应下载请求
+			strLen = recv(s, chunk_recv_buf, (pkt_len - 3), 0);
+			if (strLen <= 0) {
+				if (WSAGetLastError() != WSAEWOULDBLOCK)
+				{
+					closesocket(s);
+					return;
+				}
+			}
+			else {
+				if (chunk_recv_buf[0] == 1) {
+					char* temp = chunk_recv_buf;
+					temp = temp + 1;
+					pView->fileLength = ntohl(*(u_long *)temp);
+					pView->leftToRecv = pView->fileLength;
+					char sendbuf[MAX_BUF_SIZE] = { 0 };
+					temp = sendbuf;
+					*(char*)temp = 13;
+					temp = temp + 1;
+					*(u_short*)temp = htons(4);
+					temp = temp + 2;
+					*(char*)temp = 1;
+					if (pView->UploadOnce(sendbuf, 4) == FALSE)
+					{
+						DWORD errSend = WSAGetLastError();
+						TRACE("\nError occurred while sending file chunks\n"
+							"\tGetLastError = %d\n", errSend);
+						ASSERT(errSend != WSAEWOULDBLOCK);
+					}
+					pView->sequence = 0;
+					pView->client_state = 7;
+				}
+				else {
+					//服务器拒绝下载请求
+				}
+			}
+
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void CClientDoc::socket_state7_fsm(SOCKET s)
+{
+	CDisplayView* pView;
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
+	char sendbuf[4] = { 0 };
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen <= 0) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
+	}
+	else {
+		if (strLen != 3) {
+			printf("state7 not receive enough data!!!/n");
+		}
+		u_int event = recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_short pkt_len = ntohs(*(u_short*)temp);
+		switch (event)
+		{
+		case 7://收到下载数据
+			u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE) ? pView->leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
+			if (pView->RecvOnce(chunk_recv_buf, writeChunkSize) == FALSE)
 			{
-				break;
+				DWORD errSend = WSAGetLastError();
+				TRACE("\nError occurred while receiving file chunks\n"
+					"\tGetLastError = %d\n", errSend);
+				ASSERT(errSend != WSAEWOULDBLOCK);
+			}
+			temp = chunk_recv_buf;
+			pView->sequence = *(char*)temp;
+			temp = temp + 1;
+			u_int data_len = ntohs(*(u_short*)temp);
+			temp = temp + 2;
+			pView->leftToRecv -= data_len;
+			pView->downloadFile.Write(temp, data_len);
+
+			temp = sendbuf;
+			*(char*)temp = 8;
+			temp = temp + 1;
+			*(u_short*)temp = htons(4);
+			temp = temp + 2;
+			*(char*)temp = pView->sequence;
+			send(s, sendbuf, 4, 0);
+
+			if (pView->leftToRecv > 0) {
+				pView->client_state = 7;
+			}
+			else {
+				pView->client_state = 3;
+			}
+
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void CClientDoc::socket_state8_fsm(SOCKET s)
+{
+	CDisplayView* pView;
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[MAX_BUF_SIZE] = { 0 };
+	char sendbuf[4] = { 0 };
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen <= 0) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
+	}
+	else {
+		if (strLen != 3) {
+			printf("state8 not receive enough data!!!/n");
+		}
+		u_int event = recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_short pkt_len = ntohs(*(u_short*)temp);
+		switch (event)
+		{
+		case 20://收到回应删除请求
+			if (pView->RecvOnce(chunk_recv_buf, pkt_len - 3) == FALSE)
+			{
+				DWORD errSend = WSAGetLastError();
+				TRACE("\nError occurred while receiving file chunks\n"
+					"\tGetLastError = %d\n", errSend);
+				ASSERT(errSend != WSAEWOULDBLOCK);
+			}
+			temp = chunk_recv_buf;
+			if (*(char*)temp == 1) {
+				printf("delete success!!!\n");
+				pView->client_state = 3;
+			}
+			else {
+				//删除失败
 			}
 			break;
 		default:
@@ -200,6 +534,49 @@ void CClientDoc::socket_state3_fsm(SOCKET s)
 		}
 	}
 }
+
+void CClientDoc::socket_state9_fsm(SOCKET s)
+{
+	CDisplayView* pView;
+	char recvbuf[3] = { 0 };
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
+	char sendbuf[4] = { 0 };
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen <= 0) {
+		if (WSAGetLastError() != WSAEWOULDBLOCK)
+		{
+			closesocket(s);
+			return;
+		}
+	}
+	else {
+		if (strLen != 3) {
+			printf("state8 not receive enough data!!!/n");
+		}
+		u_int event = recvbuf[0];
+		char* temp = &recvbuf[1];
+		u_short pkt_len = ntohs(*(u_short*)temp);
+		switch (event)
+		{
+		case 6: {//收到返回目录
+			if (pView->RecvOnce(chunk_recv_buf, pkt_len - 3) == FALSE)
+			{
+				DWORD errSend = WSAGetLastError();
+				TRACE("\nError occurred while receiving file chunks\n"
+					"\tGetLastError = %d\n", errSend);
+				ASSERT(errSend != WSAEWOULDBLOCK);
+			}
+			CString recvdialog(chunk_recv_buf);
+			pView->UpdateDir(recvdialog);
+			pView->client_state = 3;
+			break;
+		}
+		default:
+			break;
+		}
+	}
+}
+
 
 
 BOOL CClientDoc::OnNewDocument()
