@@ -17,7 +17,7 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-#include "CDisplayView.h"
+
 
 #define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
 #define CHUNK_SIZE 4096
@@ -35,7 +35,7 @@ END_MESSAGE_MAP()
 CClientDoc::CClientDoc() noexcept
 {
 	// TODO: 在此添加一次性构造代码
-	
+	pView = nullptr;
 }
 
 CClientDoc::~CClientDoc()
@@ -45,34 +45,30 @@ CClientDoc::~CClientDoc()
 
 void CClientDoc::socket_state1_fsm(SOCKET s)
 {
-	char sendbuf[MAX_BUF_SIZE] = { 0 };
-	char recvbuf[MAX_BUF_SIZE] = { 0 };
-	CDisplayView* pView;
 	POSITION pos = GetFirstViewPosition();
 	pView = (CDisplayView*)GetNextView(pos);
 
-	
-	int strLen = recv(s, recvbuf, MAX_BUF_SIZE, 0);
-	if (strLen <= 0)
-	{
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
-		{
-			closesocket(s);
-			return;
-		}
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = nullptr;
+	char event;
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		u_short packet_len = ntohs(*(u_short*)temp);
+		assert(packet_len > 3);
+		strLen = recv(s, recvbuf + 3, packet_len - 3, 0);
+		assert(strLen == packet_len - 3);
 	}
-	else
+	else return;
+
+	switch (event)
 	{
-		u_int event= recvbuf[0];
-		char* temp = &recvbuf[1];
-		u_int packet_len = ntohs(*(u_short*)temp);
-		//提取事件号
-		switch (event)
-		{
-		case 2://收到质询报文
+	case 2://收到质询报文
 		{
 			u_int num_N = recvbuf[3];
-			char* temp = &recvbuf[4];
+			temp = &recvbuf[4];
 
 			u_int password_value = 0;
 			u_int password_len = pView->m_password.GetLength();//只有点击连接时，才会刷新用户名和密码，此时一定可以获取到上次正确的密码
@@ -98,77 +94,61 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 					
 					sendbuf[0] = 3;//填写事件号
 					temp = &sendbuf[1];
-					*(u_short*)temp = htons(5);
+					*(u_short*)temp = htons(5);//packet_len=5
+					temp = &sendbuf[3];
 					*(u_short*)temp = htons(correct_result);//写入赋值，挺复杂的写法
 					send(s, sendbuf, 5, 0);
 					TRACE("respond challenge");
 					pView->client_state = 2;//状态转换，已返回质询结果，等待确认
 				}
-				else//密码长度不对
-				{
-					break;
+				else
+				{//密码长度不对
 				}
 			}
-			else//整数个数不对
-			{
-				break;
+			else
+			{//整数个数不对
 			}
 		}
-			break;
-		default:
-			break;
-		}
+		break;
+	default:
+		break;
 	}
+	return;
 }
 
 void CClientDoc::socket_state2_fsm(SOCKET s)
 {
-	char recvbuf[3] = { 0 };
-	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
-	int temp = 0;
-	CDisplayView* pView;
 	POSITION pos = GetFirstViewPosition();
 	pView = (CDisplayView*)GetNextView(pos);
+
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = nullptr;
+	char event;
 	int strLen = recv(s, recvbuf, 3, 0);
-	if (strLen <= 0)
-	{
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
-		{
-			closesocket(s);
-			return;
-		}
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		u_short packet_len = ntohs(*(u_short*)temp); // 这里应该等于packet_len = 4
+		assert(packet_len > 3);
+		strLen = recv(s, recvbuf + 3, packet_len - 3, 0);
+		assert(strLen == packet_len - 3);
 	}
-	else
+	else return;
+
+	switch (event)
 	{
-		int event = recvbuf[0];
-		char* pkt_temp = &recvbuf[1];
-		u_short packet_len = ntohs(*(u_short*)pkt_temp);
-		switch (event)
-		{
-		case 4: {//认证结果报文
-			if (pView->RecvOnce(chunk_recv_buf, packet_len - 3) == FALSE)
-			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while receiving file chunks\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
-			}
-			char* pkt_temp = chunk_recv_buf;
-			if (*(char*)pkt_temp == 1) {
-				pkt_temp = pkt_temp + 1;
-				CString recvdialog(pkt_temp);
-				pView->UpdateDir(recvdialog);
-				pView->client_state = 3;
-				break;
-			}
-			else {
-				//认证失败
-			}
+	case 4://认证结果报文
+		if (recvbuf[3] == 1) {
+			pView->client_state = 3;//认证成功，进入等待操作状态
+			TRACE("认证成功");
 		}
-		default:
-			break;
-		}
+		else;//认证失败
+		break;
+	default:
+		break;
 	}
+	return;
 }
 
 void CClientDoc::socket_state3_fsm(SOCKET s)
@@ -178,7 +158,9 @@ void CClientDoc::socket_state3_fsm(SOCKET s)
 
 void CClientDoc::socket_state4_fsm(SOCKET s)
 {
-	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char recvbuf[3] = { 0 };
 	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
 	char chunk_send_buf[CHUNK_SIZE] = { 0 };
@@ -253,7 +235,9 @@ void CClientDoc::socket_state4_fsm(SOCKET s)
 
 void CClientDoc::socket_state5_fsm(SOCKET s)
 {
-	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char recvbuf[3] = { 0 };
 	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
 	char chunk_send_buf[CHUNK_SIZE] = { 0 };
@@ -362,7 +346,9 @@ void CClientDoc::socket_state5_fsm(SOCKET s)
 
 void CClientDoc::socket_state6_fsm(SOCKET s)
 {
-	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char recvbuf[3] = { 0 };
 	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
 	char chunk_send_buf[CHUNK_SIZE] = { 0 };
@@ -429,7 +415,9 @@ void CClientDoc::socket_state6_fsm(SOCKET s)
 
 void CClientDoc::socket_state7_fsm(SOCKET s)
 {
-	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char recvbuf[3] = { 0 };
 	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
 	char sendbuf[4] = { 0 };
@@ -451,37 +439,38 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 		switch (event)
 		{
 		case 7://收到下载数据
-			u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE) ? pView->leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
-			if (pView->RecvOnce(chunk_recv_buf, writeChunkSize) == FALSE)
 			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while receiving file chunks\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
-			}
-			temp = chunk_recv_buf;
-			pView->sequence = *(char*)temp;
-			temp = temp + 1;
-			u_int data_len = ntohs(*(u_short*)temp);
-			temp = temp + 2;
-			pView->leftToRecv -= data_len;
-			pView->downloadFile.Write(temp, data_len);
+				u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE) ? pView->leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
+				if (pView->RecvOnce(chunk_recv_buf, writeChunkSize) == FALSE)
+				{
+					DWORD errSend = WSAGetLastError();
+					TRACE("\nError occurred while receiving file chunks\n"
+						"\tGetLastError = %d\n", errSend);
+					ASSERT(errSend != WSAEWOULDBLOCK);
+				}
+				temp = chunk_recv_buf;
+				pView->sequence = *(char*)temp;
+				temp = temp + 1;
+				u_int data_len = ntohs(*(u_short*)temp);
+				temp = temp + 2;
+				pView->leftToRecv -= data_len;
+				pView->downloadFile.Write(temp, data_len);
 
-			temp = sendbuf;
-			*(char*)temp = 8;
-			temp = temp + 1;
-			*(u_short*)temp = htons(4);
-			temp = temp + 2;
-			*(char*)temp = pView->sequence;
-			send(s, sendbuf, 4, 0);
+				temp = sendbuf;
+				*(char*)temp = 8;
+				temp = temp + 1;
+				*(u_short*)temp = htons(4);
+				temp = temp + 2;
+				*(char*)temp = pView->sequence;
+				send(s, sendbuf, 4, 0);
 
-			if (pView->leftToRecv > 0) {
-				pView->client_state = 7;
+				if (pView->leftToRecv > 0) {
+					pView->client_state = 7;
+				}
+				else {
+					pView->client_state = 3;
+				}
 			}
-			else {
-				pView->client_state = 3;
-			}
-
 			break;
 		default:
 			break;
@@ -491,7 +480,9 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 
 void CClientDoc::socket_state8_fsm(SOCKET s)
 {
-	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char recvbuf[3] = { 0 };
 	char chunk_recv_buf[MAX_BUF_SIZE] = { 0 };
 	char sendbuf[4] = { 0 };
@@ -537,7 +528,9 @@ void CClientDoc::socket_state8_fsm(SOCKET s)
 
 void CClientDoc::socket_state9_fsm(SOCKET s)
 {
-	CDisplayView* pView;
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char recvbuf[3] = { 0 };
 	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
 	char sendbuf[4] = { 0 };

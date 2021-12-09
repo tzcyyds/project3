@@ -17,8 +17,8 @@ IMPLEMENT_DYNCREATE(CDisplayView, CFormView)
 
 CDisplayView::CDisplayView()
 	: CFormView(IDD_DISPLAYVIEW)
-	, m_user(_T(""))
-	, m_password(_T(""))
+	, m_user(_T("test"))
+	, m_password(_T("12345"))
 	,client_state(0)
 	, m_ip(0x7f000001)
 	, m_SPort(9190)
@@ -103,8 +103,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			case 2://等待认证结果
 				pDoc->socket_state2_fsm(hSocket);
 				break;
-			case 3://认证成功了！此时可以交互文件夹及文件相关信息
-				//解析报文，提取事件号，调用不同处理函数
+			case 3://认证成功了！
 				pDoc->socket_state3_fsm(hSocket);
 				break;
 			case 4://等待上传确认状态
@@ -143,9 +142,8 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void CDisplayView::OnBnClickedConnect()
 {
-	
-	CClientDoc* pDoc = (CClientDoc*)GetDocument();
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	CClientDoc* pDoc = (CClientDoc*)GetDocument();
 
 	// 判断异常情况
 	if (m_ip == NULL)

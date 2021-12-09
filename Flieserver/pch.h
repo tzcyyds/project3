@@ -10,7 +10,8 @@
 // 添加要在此处预编译的标头
 #include "framework.h"
 #include <iostream>
-
+#include <propkey.h>
+#include <sstream>
 #include <unordered_map>
 
 #endif //PCH_H

@@ -17,12 +17,12 @@ public:
 
 // 操作
 public:
-	void fsm_Challenge(SOCKET hSocket,int event,char* buf, int strlen);
-	void fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen);
-	void MainStateproc(SOCKET hSocket, int event, char* buf, int strlen);
-	void Recvfile(SOCKET hSocket, int event, char* buf, int strlen);
-	void WaitUpload(SOCKET hSocket, int event, char* buf, int strlen);
-	void WaitAck(SOCKET hSocket, int event, char* buf, int strlen);
+	void fsm_Challenge(SOCKET hSocket);
+	void fsm_HandleRes(SOCKET hSocket);
+	void MainState_fsm(SOCKET hSocket);
+	void Recvfile(SOCKET hSocket);
+	void WaitUpload(SOCKET hSocket);
+	void WaitAck(SOCKET hSocket);
 
 // 重写
 public:

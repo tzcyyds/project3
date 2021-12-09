@@ -4,7 +4,7 @@
 
 
 #pragma once
-
+#include "CDisplayView.h"
 
 class CClientDoc : public CDocument
 {
@@ -41,8 +41,8 @@ public:
 	void socket_state8_fsm(SOCKET s);
 	void socket_state9_fsm(SOCKET s);
 
-
-
+protected:
+	CDisplayView* pView;
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;

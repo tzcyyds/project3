@@ -11,8 +11,7 @@
 #endif
 
 #include "FlieserverDoc.h"
-#include <propkey.h>
-#include <sstream>
+
 
 constexpr auto MAX_BUF_SIZE = 128;
 
@@ -48,10 +47,22 @@ CFlieserverDoc::~CFlieserverDoc()
 }
 
 
-void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int strlen)
+void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
 {
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
-	char* temp = sendbuf;
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp= nullptr;
+	char event;
+	int strLen = recv(hSocket, recvbuf, 3, 0);
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		u_short packet_len = ntohs(*(u_short*)temp);
+		assert(packet_len > 3);
+		strLen = recv(hSocket, recvbuf + 3, packet_len - 3, 0);
+		assert(strLen == packet_len - 3);
+	}
+	else return;
 	//函数：拿到用户名，查用户名对应的密码，随机出随机数，和密钥异或，存起来，然后发送随机数。最后，更改状态
 	switch (event)
 	{
@@ -59,9 +70,9 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 		break;
 	case 1://用户名到来
 		{
-			int namelen = buf[1];
+			int namelen = recvbuf[3];
 			assert(namelen >= 0 && namelen <= MAX_BUF_SIZE);
-			string username(&buf[2], namelen);
+			string username(&recvbuf[4], namelen);
 			if (m_UserInfo.myMap.count(username))
 			{
 				m_linkInfo.myMap[hSocket].username = username;
@@ -82,8 +93,11 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 				u_int num_N = rand() % (MAX_VALUE - MIN_VALUE + 1) + MIN_VALUE;
 
 				sendbuf[0] = 2;//填事件号
-				sendbuf[1] = num_N;//整数个数
-				temp = sendbuf + 2;//指针就位
+				//send_packet_len=4+num_N*2
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(4 + num_N * 2);
+				sendbuf[3] = num_N;//整数个数
+				temp = sendbuf + 4;//指针就位
 
 				u_short correct_sum = 0;//本地计算值
 				u_short correct_result = 0;
@@ -97,7 +111,8 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 					memcpy(temp, &x, 2);
 					temp += 2;
 				}
-				send(hSocket, sendbuf, MAX_BUF_SIZE, 0);//发送质询报文
+				send(hSocket, sendbuf, 4 + num_N * 2, 0);//发送质询报文
+
 				correct_result = correct_sum ^ correct_password;//异或
 				m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
 				m_linkInfo.myMap[hSocket].state = 2;//状态转移
@@ -114,21 +129,30 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket, int event, char* buf, int str
 	return;
 }
 
-void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int strlen)
+void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 {
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
-	char* temp = buf + 1;
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = nullptr;
+	char event;
+	int strLen = recv(hSocket, recvbuf, 3, 0);
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		u_short packet_len = ntohs(*(u_short*)temp);//若是正确报文，此处total_length=5
+		assert(packet_len > 3);
+		strLen = recv(hSocket, recvbuf + 3, packet_len - 3, 0);
+		assert(strLen == packet_len - 3);
+	}
+	else return;
 	//函数：提取有用信息，把信息和存的值比较，如果正确，返回认证结果，更改状态，用户在线。如果错误，就...
 	switch (event)
 	{
-	case 0://非法数据
-		break;
-	case 1://用户名到来，不应到来
-		break;
-	case 2://质询结果到来
+	case 3://质询结果到来
 		{
 			if (m_Comparison.myMap.count(hSocket))
 			{
+				temp = recvbuf + 3;
 				u_short answer = ntohs(*(u_short*)temp);
 				//用完要清空
 				u_short t_result = 0;
@@ -138,8 +162,10 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 				if (answer == t_result)
 				{
 					sendbuf[0] = 4;//填事件号
-					sendbuf[1] = 1;//认证成功
-					send(hSocket, sendbuf, 3, 0);//发送
+					temp = &sendbuf[1];
+					*(u_short*)temp = htons(4);//packet_len=4
+					sendbuf[3] = 1;//认证成功
+					send(hSocket, sendbuf, 4, 0);//发送
 					m_linkInfo.myMap[hSocket].state = 3;//进入主状态
 					TRACE("user online");
 				}
@@ -154,22 +180,22 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket, int event, char* buf, int str
 	return;
 }
 
-void CFlieserverDoc::MainStateproc(SOCKET hSocket, int event, char* buf, int strlen)
+void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 {
 
 }
 
-void CFlieserverDoc::Recvfile(SOCKET hSocket, int event, char* buf, int strlen)
+void CFlieserverDoc::Recvfile(SOCKET hSocket)
 {
 
 }
 
-void CFlieserverDoc::WaitUpload(SOCKET hSocket, int event, char* buf, int strlen)
+void CFlieserverDoc::WaitUpload(SOCKET hSocket)
 {
 
 }
 
-void CFlieserverDoc::WaitAck(SOCKET hSocket, int event, char* buf, int strlen)
+void CFlieserverDoc::WaitAck(SOCKET hSocket)
 {
 
 }
