@@ -52,11 +52,12 @@ void CClientDoc::socket_state1_fsm(SOCKET s)
 	char recvbuf[MAX_BUF_SIZE] = { 0 };
 	char* temp = nullptr;
 	char event;
+	u_short packet_len;
 	int strLen = recv(s, recvbuf, 3, 0);
 	if (strLen == 3) {
 		event = recvbuf[0];
 		temp = &recvbuf[1];
-		u_short packet_len = ntohs(*(u_short*)temp);
+		packet_len = ntohs(*(u_short*)temp);
 		assert(packet_len > 3);
 		strLen = recv(s, recvbuf + 3, packet_len - 3, 0);
 		assert(strLen == packet_len - 3);
@@ -125,11 +126,12 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 	char recvbuf[MAX_BUF_SIZE] = { 0 };
 	char* temp = nullptr;
 	char event;
+	u_short packet_len;
 	int strLen = recv(s, recvbuf, 3, 0);
 	if (strLen == 3) {
 		event = recvbuf[0];
 		temp = &recvbuf[1];
-		u_short packet_len = ntohs(*(u_short*)temp); // 这里应该等于packet_len = 4
+		packet_len = ntohs(*(u_short*)temp); // 这里应该等于packet_len = 4
 		assert(packet_len > 3);
 		strLen = recv(s, recvbuf + 3, packet_len - 3, 0);
 		assert(strLen == packet_len - 3);
@@ -153,6 +155,35 @@ void CClientDoc::socket_state2_fsm(SOCKET s)
 
 void CClientDoc::socket_state3_fsm(SOCKET s)
 {
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = nullptr;
+	char event;
+	u_short packet_len;
+	int strLen = recv(s, recvbuf, 3, 0);
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		packet_len = ntohs(*(u_short*)temp); 
+		assert(packet_len > 3);
+		strLen = recv(s, recvbuf + 3, packet_len - 3, 0);
+		assert(strLen == packet_len - 3);
+	}
+	else return;
+	switch (event)
+	{
+	case 6://接收返回目录
+		{
+		std::string file_list(&recvbuf[3], packet_len - 3);
+		pView->UpdateDir(file_list.c_str());
+		}
+		break;
+	default:
+		break;
+	}
 
 }
 

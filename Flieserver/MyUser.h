@@ -5,7 +5,7 @@ using namespace std;
 
 struct myUser
 {
-	DWORD ip = 0;
+	IN_ADDR ip = { 0 };
 	WORD port = 0;//WORDµÈÍ¬ÓÚunsigned short
 	string username = "";
 	int state = 0;

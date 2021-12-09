@@ -39,6 +39,7 @@ CFlieserverDoc::CFlieserverDoc() noexcept
 	m_UserInfo.initDoc();//本地用户信息
 	m_linkInfo.myMap.clear();//连接-用户名信息
 	m_Comparison.myMap.clear();
+	pView = nullptr;
 
 }
 
@@ -46,18 +47,46 @@ CFlieserverDoc::~CFlieserverDoc()
 {
 }
 
+CString CFlieserverDoc::PathtoList(CString path = "..\\m_filepath\\*") // 获取指定目录下的文件列表，文件之间用|隔开
+{
+	CString file_list; // 文件列表
+	CFileFind file_find; // 创建一个CFileFind实例
 
+	BOOL bfind = file_find.FindFile(path);
+	while (bfind)
+	{
+		bfind = file_find.FindNextFile(); // FindNextFile()必须放在循环中的最前面
+		CString strpath;
+		if (file_find.IsDots())
+			continue;
+		if (!file_find.IsDirectory())          //判断是目录还是文件
+		{
+			strpath = file_find.GetFileName(); //文件则读取文件名
+			file_list += strpath;
+			file_list += '|';
+		}
+		else
+		{
+			strpath = file_find.GetFilePath(); //获取到的是绝对路径
+			file_list += strpath;
+			file_list += '|';
+		}
+
+	}
+	return file_list;
+}
 void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
 {
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
 	char recvbuf[MAX_BUF_SIZE] = { 0 };
 	char* temp= nullptr;
 	char event;
+	u_short packet_len;
 	int strLen = recv(hSocket, recvbuf, 3, 0);
 	if (strLen == 3) {
 		event = recvbuf[0];
 		temp = &recvbuf[1];
-		u_short packet_len = ntohs(*(u_short*)temp);
+		packet_len = ntohs(*(u_short*)temp);
 		assert(packet_len > 3);
 		strLen = recv(hSocket, recvbuf + 3, packet_len - 3, 0);
 		assert(strLen == packet_len - 3);
@@ -131,15 +160,19 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
 
 void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 {
+	POSITION pos = GetFirstViewPosition();
+	pView = (CDisplayView*)GetNextView(pos);
+
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
 	char recvbuf[MAX_BUF_SIZE] = { 0 };
 	char* temp = nullptr;
 	char event;
+	u_short packet_len;
 	int strLen = recv(hSocket, recvbuf, 3, 0);
 	if (strLen == 3) {
 		event = recvbuf[0];
 		temp = &recvbuf[1];
-		u_short packet_len = ntohs(*(u_short*)temp);//若是正确报文，此处total_length=5
+		packet_len = ntohs(*(u_short*)temp);//若是正确报文，此处total_length=5
 		assert(packet_len > 3);
 		strLen = recv(hSocket, recvbuf + 3, packet_len - 3, 0);
 		assert(strLen == packet_len - 3);
@@ -168,10 +201,21 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 					send(hSocket, sendbuf, 4, 0);//发送
 					m_linkInfo.myMap[hSocket].state = 3;//进入主状态
 					TRACE("user online");
+					pView->UserName.AddString(inet_ntoa(m_linkInfo.myMap[hSocket].ip)); // 添加在线用户的IP
+					
+					//用户在线之后立即给用户发送一份目录，这是唯一一次主动发送目录。
+					memset(sendbuf, 0, 4);//清空字符数组
+					sendbuf[0] = 6;
+					temp = &sendbuf[1];
+					CString m_list = PathtoList();
+					strLen = m_list.GetLength();
+					*(u_short*)temp = htons(strLen + 3);//packet_len=strLen + 3
+					strcpy_s(sendbuf + 3, strLen + 1, m_list);
+					send(hSocket, sendbuf, strLen + 3, 0);
 				}
-				else TRACE("质询结果错");// 质询结果出错
+				else TRACE("质询结果错");
 			}
-			else TRACE("非法套接字的质询结果");//非法套接字发送的质询结果
+			else TRACE("非法套接字的质询结果");
 		}
 		break;
 	default:

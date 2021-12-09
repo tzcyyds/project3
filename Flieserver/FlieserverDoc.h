@@ -5,6 +5,7 @@
 
 #pragma once
 #include "MyUser.h"
+#include "CDisplayView.h"
 
 class CFlieserverDoc : public CDocument
 {
@@ -14,9 +15,10 @@ protected: // 仅从序列化创建
 
 // 特性
 public:
-
+	CDisplayView* pView;
 // 操作
 public:
+	CString PathtoList(CString path);
 	void fsm_Challenge(SOCKET hSocket);
 	void fsm_HandleRes(SOCKET hSocket);
 	void MainState_fsm(SOCKET hSocket);

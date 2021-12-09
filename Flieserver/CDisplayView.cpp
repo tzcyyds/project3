@@ -93,7 +93,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 				//hCommSock进入连接建立状态,等待用户名
 				myUser user;
-				user.ip = clntAdr.sin_addr.S_un.S_addr;
+				user.ip = clntAdr.sin_addr;
 				user.port = clntAdr.sin_port;
 				user.username = "NULL";
 				user.state = 1;//
