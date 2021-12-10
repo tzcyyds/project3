@@ -203,12 +203,13 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 					TRACE("user online");
 					pView->UserName.AddString(inet_ntoa(m_linkInfo.myMap[hSocket].ip)); // 添加在线用户的IP
 					
-					//用户在线之后立即给用户发送一份目录，这是唯一一次主动发送目录。这里利用recvbuf发送报文
+					//用户在线之后立即给用户发送一份目录。这里利用recvbuf发送报文
 					memset(recvbuf, '\0', 5);//清空字符数组
 					recvbuf[0] = 6;
 					temp = &recvbuf[1];
 					CString m_list = PathtoList();//发送默认路径下的目录
 					strLen = m_list.GetLength();
+					assert(strLen > 0);//若为空目录，则要特殊处理
 					*(u_short*)temp = htons(strLen + 3);//packet_len=strLen + 3
 					strcpy_s(recvbuf + 3, strLen + 1, m_list);
 					send(hSocket, recvbuf, strLen + 3, 0);
@@ -256,13 +257,14 @@ void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 				
 				CString m_send = PathtoList(m_recvdir); // 发送该目录下的文件列表给客户端，目录已经有"\\*"了
 				strLen = m_send.GetLength();//重新使用strLen
+				assert(strLen > 0);//若为空目录，则要特殊处理
 				*(u_short*)temp = htons(strLen + 3);
 				//temp = m_send.GetBuffer();
 				//使用strcpy,长度全都需要+1！
 				strcpy_s(&sendbuf[3], strLen + 1, m_send);
 				//m_send.ReleaseBuffer();
 				send(hSocket, sendbuf, strLen + 3, 0);
-				m_linkInfo.myMap[hSocket].strdirpath = m_recvdir.Left(m_recvdir.GetLength() - 1);// 让服务器用strdirpath记住用户正在看的目录
+				m_linkInfo.myMap[hSocket].strdirpath = m_recvdir.Left(m_recvdir.GetLength() - 1);// 让服务器用strdirpath记住用户正在看的目录，去掉'*'
 			}
 			else{}//请求目录不合法
 		}
@@ -272,6 +274,39 @@ void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 	case 15://请求上传
 		break;
 	case 19://请求删除
+		{
+			CString m_filename(&recvbuf[3], packet_len - 3);
+			if (remove(m_filename) == -1)
+			{
+				TRACE("\nError occurred while deleting file:\n");
+				sendbuf[0] = 20;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(5);
+				sendbuf[3] = 0;
+				sendbuf[4] = 0;
+				send(hSocket, sendbuf, 5, 0);
+			}
+			else
+			{
+				sendbuf[0] = 20;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(5);
+				sendbuf[3] = 1;
+				sendbuf[4] = 0;
+				send(hSocket, sendbuf, 5, 0);
+				//删除成功后令client立即更新目录
+				recvbuf[0] = 6;
+				temp = &recvbuf[1];
+
+				CString m_send = PathtoList(m_linkInfo.myMap[hSocket].strdirpath + '*'); // 发送该目录下的文件列表给客户端，目录已经有"\\*"了
+				strLen = m_send.GetLength();//重新使用strLen
+				assert(strLen > 0);//若为空目录，则要特殊处理
+				*(u_short*)temp = htons(strLen + 3);
+				//使用strcpy,长度全都需要+1！
+				strcpy_s(&recvbuf[3], strLen + 1, m_send);
+				send(hSocket, recvbuf, strLen + 3, 0);
+			}
+		}
 		break;
 	default:
 		break;

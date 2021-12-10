@@ -46,7 +46,7 @@ public:
 	int client_state;
 	SOCKET hCommSock;
 	SOCKADDR_IN servAdr;
-	CString m_send;
+
 	CString strdirpath; // 文件路径
 
 	// 上传、下载和删除通用
@@ -66,10 +66,6 @@ public:
 	CString downloadName;
 	CFile downloadFile;
 	ULONGLONG leftToRecv;
-
-	// 删除文件相关
-	CString deleteName;
-
 
 	afx_msg void OnBnClickedEnterdir();
 	afx_msg void OnBnClickedGoback();

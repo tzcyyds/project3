@@ -177,9 +177,18 @@ void CClientDoc::socket_state3_fsm(SOCKET s)
 	{
 	case 6://接收返回目录
 		{
-		//std::string file_list(&recvbuf[3], packet_len - 3);
-		CString file_list(&recvbuf[3], packet_len - 3);
-		pView->UpdateDir(file_list);
+			//std::string file_list(&recvbuf[3], packet_len - 3);
+			CString file_list(&recvbuf[3], packet_len - 3);
+			pView->UpdateDir(file_list);
+		}
+		break;
+	case 20://删除结果
+		{
+			if (recvbuf[3] == 1) {
+				TRACE("\n 删除成功");
+			}
+			else{
+			}
 		}
 		break;
 	default:
@@ -509,99 +518,6 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 		}
 	}
 }
-
-void CClientDoc::socket_state8_fsm(SOCKET s)
-{
-	POSITION pos = GetFirstViewPosition();
-	pView = (CDisplayView*)GetNextView(pos);
-
-	char recvbuf[3] = { 0 };
-	char chunk_recv_buf[MAX_BUF_SIZE] = { 0 };
-	char sendbuf[4] = { 0 };
-	int strLen = recv(s, recvbuf, 3, 0);
-	if (strLen <= 0) {
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
-		{
-			closesocket(s);
-			return;
-		}
-	}
-	else {
-		if (strLen != 3) {
-			printf("state8 not receive enough data!!!/n");
-		}
-		u_int event = recvbuf[0];
-		char* temp = &recvbuf[1];
-		u_short pkt_len = ntohs(*(u_short*)temp);
-		switch (event)
-		{
-		case 20://收到回应删除请求
-			if (pView->RecvOnce(chunk_recv_buf, pkt_len - 3) == FALSE)
-			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while receiving file chunks\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
-			}
-			temp = chunk_recv_buf;
-			if (*(char*)temp == 1) {
-				printf("delete success!!!\n");
-				pView->client_state = 3;
-			}
-			else {
-				//删除失败
-			}
-			break;
-		default:
-			break;
-		}
-	}
-}
-
-void CClientDoc::socket_state9_fsm(SOCKET s)
-{
-	POSITION pos = GetFirstViewPosition();
-	pView = (CDisplayView*)GetNextView(pos);
-
-	char recvbuf[3] = { 0 };
-	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
-	char sendbuf[4] = { 0 };
-	int strLen = recv(s, recvbuf, 3, 0);
-	if (strLen <= 0) {
-		if (WSAGetLastError() != WSAEWOULDBLOCK)
-		{
-			closesocket(s);
-			return;
-		}
-	}
-	else {
-		if (strLen != 3) {
-			printf("state8 not receive enough data!!!/n");
-		}
-		u_int event = recvbuf[0];
-		char* temp = &recvbuf[1];
-		u_short pkt_len = ntohs(*(u_short*)temp);
-		switch (event)
-		{
-		case 6: {//收到返回目录
-			if (pView->RecvOnce(chunk_recv_buf, pkt_len - 3) == FALSE)
-			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while receiving file chunks\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
-			}
-			CString recvdialog(chunk_recv_buf);
-			pView->UpdateDir(recvdialog);
-			pView->client_state = 3;
-			break;
-		}
-		default:
-			break;
-		}
-	}
-}
-
 
 
 BOOL CClientDoc::OnNewDocument()

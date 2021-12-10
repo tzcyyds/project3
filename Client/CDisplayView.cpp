@@ -103,7 +103,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			case 2://等待认证结果
 				pDoc->socket_state2_fsm(hSocket);
 				break;
-			case 3://认证成功了！
+			case 3://主状态
 				pDoc->socket_state3_fsm(hSocket);
 				break;
 			case 4://等待上传确认状态
@@ -117,12 +117,6 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 			case 7://等待下载数据状态
 				pDoc->socket_state7_fsm(hSocket);
-				break;
-			case 8://等待目录删除结果状态
-				pDoc->socket_state8_fsm(hSocket);
-				break;
-			case 9://等待目录列表状态
-				pDoc->socket_state9_fsm(hSocket);
 				break;
 			default:
 				break;
@@ -232,15 +226,14 @@ void CDisplayView::OnBnClickedEnterdir()
 		{
 			char sendbuf[MAX_BUF_SIZE] = { 0 };
 			char* temp = nullptr;
-			m_send = selFile + "\\*";
-			strdirpath = m_send; // 本地保存当前的文件夹路径，在返回上一级文件夹时会使用到
-			int strLen = m_send.GetLength();
+			strdirpath = selFile + "\\*";// 本地保存当前的文件夹路径，在返回上一级文件夹时会使用到
+			int strLen = strdirpath.GetLength();
 			sendbuf[0] = 5;
 			temp = &sendbuf[1];
 			*(u_short*)temp = htons(strLen + 3);
 			//temp = m_send.GetBuffer();
 			//使用strcpy,长度全都需要+1！
-			strcpy_s(&sendbuf[3], strLen + 1, m_send);
+			strcpy_s(&sendbuf[3], strLen + 1, strdirpath);
 			//m_send.ReleaseBuffer();
 			//此处可能不需要那么“安全”的发送方式
 			send(hCommSock, sendbuf, strLen + 3, 0);
@@ -443,33 +436,28 @@ void CDisplayView::OnBnClickedDownload()
 void CDisplayView::OnBnClickedDelete()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	char sendbuf[MAX_BUF_SIZE] = { 0 };
-	char* temp = sendbuf;
-	FileName.GetText(FileName.GetCurSel(), deleteName); // 获取用户要删除的文件名
-	if (!deleteName.IsEmpty())
-	{
-		if (AfxMessageBox((CString)"确定要删除这个文件？", 4 + 48) == 6)
+	if (client_state == 3) {
+		CString deleteName;
+		char sendbuf[MAX_BUF_SIZE] = { 0 };
+		char* temp = sendbuf;
+		FileName.GetText(FileName.GetCurSel(), deleteName); // 获取用户要删除的文件名
+		if (!deleteName.IsEmpty())
 		{
-			nameLength = deleteName.GetLength();
-			*(char*)temp = 19;
-			temp = temp + 1;
-			*(u_short*)temp = htons((5 + nameLength));
-			temp = temp + 2;
-			*(u_short*)temp = htons(nameLength);
-			temp = temp + 2;
-			memcpy(temp, deleteName.GetBuffer(nameLength), nameLength);
-			if (UploadOnce(sendbuf, (5 + nameLength)) == FALSE)
+			if (AfxMessageBox((CString)"确定要删除这个文件？", 4 + 48) == IDYES)
 			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while sending file name\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
+				deleteName = strdirpath.Left(strdirpath.GetLength() - 1) + deleteName;//拼成正确的文件名
+				nameLength = deleteName.GetLength();
+				sendbuf[0] = 19;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons((nameLength + 3));
+				temp = &sendbuf[3];
+				strcpy_s(temp, nameLength + 1, deleteName);
+				send(hCommSock, sendbuf, nameLength + 3, 0);
 			}
-			deleteName.ReleaseBuffer();
-
-			client_state = 8;//变为等待删除结果状态
 		}
 	}
+	else;
+	return;
 }
 
 void CDisplayView::UpdateDir(CString recv)  // 更新列表显示的文件目录
