@@ -215,8 +215,8 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 					strcpy_s(recvbuf + 3, strLen + 1, m_list);
 					send(hSocket, recvbuf, strLen + 3, 0);
 					//用户在线后立即为用户建立文件相关信息档案
-					//new一个对象
-					//m_linkInfo.SFMap.insert(std::pair<SOCKET, Fileinfo>(hSocket, m_file))
+					Fileinfo* m_file = new Fileinfo;
+					m_linkInfo.SFMap.insert(std::pair<SOCKET, Fileinfo*>(hSocket, m_file));
 
 				}
 				else
