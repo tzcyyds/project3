@@ -92,13 +92,13 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				}
 
 				//hCommSock进入连接建立状态,等待用户名
-				myUser user;
-				user.ip = clntAdr.sin_addr;
-				user.port = clntAdr.sin_port;
-				user.username = "NULL";
-				user.state = 1;//
-				user.strdirpath = "..\\m_filepath\\";//默认路径
-				pDoc->m_linkInfo.myMap.insert(std::pair<SOCKET, myUser>(hCommSock, user));
+				User* p_user=new User;
+				p_user->ip = clntAdr.sin_addr;
+				p_user->port = clntAdr.sin_port;
+				p_user->username = "WAIT";
+				p_user->state = 1;//
+				p_user->strdirpath = "..\\m_filepath\\";//默认路径
+				pDoc->m_linkInfo.SUMap.insert(std::pair<SOCKET, User*>(hCommSock, p_user));
 				TRACE("wait account");
 			}
 			break;
@@ -106,7 +106,7 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				//不提取事件号了！
 				//设定状态
-				int m_state = pDoc->m_linkInfo.myMap[hSocket].state;
+				int m_state = pDoc->m_linkInfo.SUMap[hSocket]->state;
 				//switch 根据状态
 				switch (m_state)
 				{

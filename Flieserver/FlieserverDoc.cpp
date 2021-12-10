@@ -37,8 +37,9 @@ CFlieserverDoc::CFlieserverDoc() noexcept
 	//CFlieserverDoc::BroseAllFiles("..\\m_filepath");
 	SetTitle(TEXT("fileserver"));
 	m_UserInfo.initDoc();//本地用户信息
-	m_linkInfo.myMap.clear();//连接-用户名信息
-	m_Comparison.myMap.clear();
+	//m_linkInfo.SUMap.clear();//连接-用户名信息
+	//m_linkInfo.SFMap.clear();//s-相关文件
+	m_Comparison.clear();
 	pView = nullptr;
 
 }
@@ -102,12 +103,12 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
 			int namelen = recvbuf[3];
 			assert(namelen >= 0 && namelen <= MAX_BUF_SIZE);
 			string username(&recvbuf[4], namelen);
-			if (m_UserInfo.myMap.count(username))
+			if (m_UserInfo.UserDocMap.count(username))
 			{
-				m_linkInfo.myMap[hSocket].username = username;
+				m_linkInfo.SUMap[hSocket]->username = username;
 				//准备密码
 				string password;
-				password = m_UserInfo.myMap[username];
+				password = m_UserInfo.UserDocMap[username];
 				int t_p = 0;
 				sstream << password;
 				sstream >> t_p;//转换成整数
@@ -143,8 +144,8 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
 				send(hSocket, sendbuf, 4 + num_N * 2, 0);//发送质询报文
 
 				correct_result = correct_sum ^ correct_password;//异或
-				m_Comparison.myMap.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
-				m_linkInfo.myMap[hSocket].state = 2;//状态转移
+				m_Comparison.insert(pair<SOCKET, string>(hSocket, to_string(correct_result)));//保存下来
+				m_linkInfo.SUMap[hSocket]->state = 2;//状态转移
 				TRACE("Challenge finish");
 			}
 			else;//非法用户
@@ -183,13 +184,13 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 	{
 	case 3://质询结果到来
 		{
-			if (m_Comparison.myMap.count(hSocket))
+			if (m_Comparison.count(hSocket))
 			{
 				temp = recvbuf + 3;
 				u_short answer = ntohs(*(u_short*)temp);
 				//用完要清空
 				u_short t_result = 0;
-				sstream << m_Comparison.myMap[hSocket];
+				sstream << m_Comparison[hSocket];
 				sstream >> t_result;//转换成2字节整数
 				sstream.clear();
 				if (answer == t_result)
@@ -199,9 +200,9 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 					*(u_short*)temp = htons(4);//packet_len=4
 					sendbuf[3] = 1;//认证成功
 					send(hSocket, sendbuf, 4, 0);//发送
-					m_linkInfo.myMap[hSocket].state = 3;//进入主状态
+					m_linkInfo.SUMap[hSocket]->state = 3;//进入主状态
 					TRACE("user online");
-					pView->UserName.AddString(inet_ntoa(m_linkInfo.myMap[hSocket].ip)); // 添加在线用户的IP
+					pView->UserName.AddString(inet_ntoa(m_linkInfo.SUMap[hSocket]->ip)); // 添加在线用户的IP
 					
 					//用户在线之后立即给用户发送一份目录。这里利用recvbuf发送报文
 					memset(recvbuf, '\0', 5);//清空字符数组
@@ -213,8 +214,19 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 					*(u_short*)temp = htons(strLen + 3);//packet_len=strLen + 3
 					strcpy_s(recvbuf + 3, strLen + 1, m_list);
 					send(hSocket, recvbuf, strLen + 3, 0);
+					//用户在线后立即为用户建立文件相关信息档案
+					//new一个对象
+					//m_linkInfo.SFMap.insert(std::pair<SOCKET, Fileinfo>(hSocket, m_file))
+
 				}
-				else TRACE("质询结果错");
+				else
+				{
+					TRACE("质询结果错");
+					//错了，就删除用户名，关闭连接。要记得释放内存！！
+					delete m_linkInfo.SUMap[hSocket];
+					m_linkInfo.SUMap.erase(hSocket);
+					closesocket(hSocket);
+				}
 			}
 			else TRACE("非法套接字的质询结果");
 		}
@@ -264,7 +276,7 @@ void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 				strcpy_s(&sendbuf[3], strLen + 1, m_send);
 				//m_send.ReleaseBuffer();
 				send(hSocket, sendbuf, strLen + 3, 0);
-				m_linkInfo.myMap[hSocket].strdirpath = m_recvdir.Left(m_recvdir.GetLength() - 1);// 让服务器用strdirpath记住用户正在看的目录，去掉'*'
+				m_linkInfo.SUMap[hSocket]->strdirpath = m_recvdir.Left(m_recvdir.GetLength() - 1);// 让服务器用strdirpath记住用户正在看的目录，去掉'*'
 			}
 			else{}//请求目录不合法
 		}
@@ -298,7 +310,7 @@ void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 				recvbuf[0] = 6;
 				temp = &recvbuf[1];
 
-				CString m_send = PathtoList(m_linkInfo.myMap[hSocket].strdirpath + '*'); // 发送该目录下的文件列表给客户端，目录已经有"\\*"了
+				CString m_send = PathtoList(m_linkInfo.SUMap[hSocket]->strdirpath + '*'); // 发送该目录下的文件列表给客户端，目录已经有"\\*"了
 				strLen = m_send.GetLength();//重新使用strLen
 				assert(strLen > 0);//若为空目录，则要特殊处理
 				*(u_short*)temp = htons(strLen + 3);
