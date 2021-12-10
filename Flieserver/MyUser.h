@@ -1,14 +1,14 @@
 #pragma once
 #include "pch.h"
 
-using namespace std;
 
 struct myUser
 {
 	IN_ADDR ip = { 0 };
 	WORD port = 0;//WORD等同于unsigned short
-	string username = "";
+	std::string username = "";
 	int state = 0;
+	CString strdirpath = ""; // 文件路径
 };
 
 class UserDoc {
@@ -18,7 +18,7 @@ public:
 	~UserDoc();
 
 public:
-	unordered_map<string, string> myMap;
+	std::unordered_map<std::string, std::string> myMap;
 	void writeP();
 	void initDoc();
 
@@ -27,13 +27,13 @@ class WaitList
 {
 
 public:
-	unordered_map<SOCKET, string> myMap;
+	std::unordered_map<SOCKET, std::string> myMap;
 };
 
 class LinkInfo
 {
 public:
-	unordered_map<SOCKET, myUser> myMap;
+	std::unordered_map<SOCKET, myUser> myMap;
 };
 
 

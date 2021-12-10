@@ -177,8 +177,9 @@ void CClientDoc::socket_state3_fsm(SOCKET s)
 	{
 	case 6://接收返回目录
 		{
-		std::string file_list(&recvbuf[3], packet_len - 3);
-		pView->UpdateDir(file_list.c_str());
+		//std::string file_list(&recvbuf[3], packet_len - 3);
+		CString file_list(&recvbuf[3], packet_len - 3);
+		pView->UpdateDir(file_list);
 		}
 		break;
 	default:

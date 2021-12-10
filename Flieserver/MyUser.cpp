@@ -17,6 +17,6 @@ void UserDoc::writeP()
 
 void UserDoc::initDoc()
 {
-	myMap.insert(pair<string, string>("test", "12345"));
+	myMap.insert(std::pair<std::string, std::string>("test", "12345"));
 }
 

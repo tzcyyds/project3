@@ -142,125 +142,144 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void CDisplayView::OnBnClickedConnect()
 {
-	char sendbuf[MAX_BUF_SIZE] = { 0 };
-	CClientDoc* pDoc = (CClientDoc*)GetDocument();
+	if (client_state == 0) {
+		char sendbuf[MAX_BUF_SIZE] = { 0 };
+		CClientDoc* pDoc = (CClientDoc*)GetDocument();
 
-	// 判断异常情况
-	if (m_ip == NULL)
-	{
-		AfxMessageBox((CString)"IP地址为空！");
-		return;
+		// 判断异常情况
+		if (m_ip == NULL)
+		{
+			AfxMessageBox((CString)"IP地址为空！");
+			return;
+		}
+		else if (m_SPort == NULL)
+		{
+			AfxMessageBox((CString)"云端端口为空！");
+			return;
+		}
+		else if (m_LPort == NULL)
+		{
+			AfxMessageBox((CString)"本地端口为空！");
+			return;
+		}
+
+		servAdr.sin_family = AF_INET;
+		servAdr.sin_addr.s_addr = htonl(m_ip);
+		servAdr.sin_port = htons(m_SPort);
+
+		WSADATA wsaData;
+		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+		{
+			MessageBox("WSAStartup() failed", "Client", MB_OK);
+			exit(1);
+		}
+		hCommSock = socket(AF_INET, SOCK_STREAM, 0);
+		if (hCommSock == INVALID_SOCKET)
+		{
+			MessageBox("socket() failed", "Client", MB_OK);
+			exit(1);
+		}
+
+
+		if (connect(hCommSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)//隐式绑定，连接服务器
+		{
+			MessageBox("connect() failed", "Client", MB_OK);
+			exit(1);
+		}
+
+		if (WSAAsyncSelect(hCommSock, m_hWnd, WM_SOCK, FD_READ | FD_CLOSE) == SOCKET_ERROR)
+		{
+			MessageBox("WSAAsyncSelect() failed", "Client", MB_OK);
+			exit(1);
+		}
+
+		//发送用户名报文
+		sendbuf[0] = 1;//填写事件号
+		UpdateData(TRUE);//刷新用户名和密码
+		int strLen = m_user.GetLength();
+		sendbuf[3] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
+		memcpy(sendbuf + 4, m_user, strLen);//填写用户名字符串
+		char* temp = &sendbuf[1];
+		*(u_short*)temp = htons((4 + strLen));
+		send(hCommSock, sendbuf, strLen + 4, 0);
+		TRACE("send account");
+		client_state = 1;//连接成功,已发送用户名，等待质询
 	}
-	else if (m_SPort == NULL)
-	{
-		AfxMessageBox((CString)"云端端口为空！");
-		return;
-	}
-	else if (m_LPort == NULL)
-	{
-		AfxMessageBox((CString)"本地端口为空！");
-		return;
-	}
-
-	servAdr.sin_family = AF_INET;
-	servAdr.sin_addr.s_addr = htonl(m_ip);
-	servAdr.sin_port = htons(m_SPort);
-
-	WSADATA wsaData;
-	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-	{
-		MessageBox("WSAStartup() failed", "Client", MB_OK);
-		exit(1);
-	}
-	hCommSock = socket(AF_INET, SOCK_STREAM, 0);
-	if (hCommSock == INVALID_SOCKET)
-	{
-		MessageBox("socket() failed", "Client", MB_OK);
-		exit(1);
-	}
-
-
-	if (connect(hCommSock, (SOCKADDR*)&servAdr, sizeof(servAdr)) == SOCKET_ERROR)//隐式绑定，连接服务器
-	{
-		MessageBox("connect() failed", "Client", MB_OK);
-		exit(1);
-	}
-	
-	if (WSAAsyncSelect(hCommSock, m_hWnd, WM_SOCK, FD_READ | FD_CLOSE) == SOCKET_ERROR)
-	{
-		MessageBox("WSAAsyncSelect() failed", "Client", MB_OK);
-		exit(1);
-	}
-
-	//发送用户名报文
-	sendbuf[0] = 1;//填写事件号
-	UpdateData(TRUE);//刷新用户名和密码
-	int strLen = m_user.GetLength();
-	sendbuf[3] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
-	memcpy(sendbuf + 4, m_user, strLen);//填写用户名字符串
-	char* temp = &sendbuf[1];
-	*(u_short*)temp = htons((4 + strLen));
-	send(hCommSock, sendbuf, strLen + 4, 0);
-	TRACE("send account");
-	client_state = 1;//连接成功,已发送用户名，等待质询
-
-
-
+	else;
+	return;
 }
 
 
 void CDisplayView::OnBnClickedDisconnect()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	if (client_state == 3) {
+
+	}
+	else;
+	return;
 }
 
 
 void CDisplayView::OnBnClickedEnterdir()
 {
-	// TODO: 在此添加控件通知处理程序代码
-	CString selFile;
+	if (client_state == 3) {
+		CString selFile;
 
-	FileName.GetText(FileName.GetCurSel(), selFile); //获取用户选择的目录名
+		FileName.GetText(FileName.GetCurSel(), selFile); //获取用户选择的目录名
 
-	if (selFile.Find('.') == -1) // 判断是否为文件夹，原理：文件名有'.'
-	{
-		m_send = selFile + "\\*";
-		strdirpath = m_send; // 本地保存当前的文件夹路径，在返回上一级文件夹时会使用到
-		int strLen = m_send.GetLength();
-		if (UploadOnce(m_send, strLen) == FALSE)
+		if (selFile.Find('.') == -1) // 判断是否为文件夹，原理：文件名有'.'
 		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while sending file name\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
+			char sendbuf[MAX_BUF_SIZE] = { 0 };
+			char* temp = nullptr;
+			m_send = selFile + "\\*";
+			strdirpath = m_send; // 本地保存当前的文件夹路径，在返回上一级文件夹时会使用到
+			int strLen = m_send.GetLength();
+			sendbuf[0] = 5;
+			temp = &sendbuf[1];
+			*(u_short*)temp = htons(strLen + 3);
+			//temp = m_send.GetBuffer();
+			//使用strcpy,长度全都需要+1！
+			strcpy_s(&sendbuf[3], strLen + 1, m_send);
+			//m_send.ReleaseBuffer();
+			//此处可能不需要那么“安全”的发送方式
+			send(hCommSock, sendbuf, strLen + 3, 0);
 		}
-		client_state = 9;
 	}
+	else;
+	return;
 }
 
 
 void CDisplayView::OnBnClickedGoback()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	if (strdirpath.GetLength() != 0) // 判断不是初始化时的目录
-	{
-		int pos;
-		//用字符串截取的方法获得上一级目录
-		pos = strdirpath.ReverseFind('\\');
-		strdirpath = strdirpath.Left(pos);
-		pos = strdirpath.ReverseFind('\\');
-		strdirpath = strdirpath.Left(pos);
-		strdirpath = strdirpath + "\\*";
-		int strLen = strdirpath.GetLength();
-		if (UploadOnce(strdirpath, strLen) == FALSE)
+	if (client_state == 3) {
+		if (strdirpath.GetLength() != 0) // 判断不是初始化时的目录
 		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while sending file name\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
+			char sendbuf[MAX_BUF_SIZE] = { 0 };
+			char* temp = nullptr;
+			int pos;
+			//用字符串截取的方法获得上一级目录
+			pos = strdirpath.ReverseFind('\\');
+			strdirpath = strdirpath.Left(pos);
+			pos = strdirpath.ReverseFind('\\');
+			strdirpath = strdirpath.Left(pos);
+			strdirpath = strdirpath + "\\*";
+			int strLen = strdirpath.GetLength();
+
+			sendbuf[0] = 5;
+			temp = &sendbuf[1];
+			*(u_short*)temp = htons(strLen + 3);
+			//temp = strdirpath.GetBuffer();
+			strcpy_s(&sendbuf[3], strLen + 1, strdirpath);
+			//strdirpath.ReleaseBuffer();
+			//此处可能不需要那么“安全”的发送方式
+			send(hCommSock, sendbuf, strLen + 3, 0);
 		}
-		client_state = 9;
 	}
+	else;
+	return;
 }
 
 

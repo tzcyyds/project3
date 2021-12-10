@@ -97,7 +97,8 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				user.port = clntAdr.sin_port;
 				user.username = "NULL";
 				user.state = 1;//
-				pDoc->m_linkInfo.myMap.insert(pair<SOCKET, myUser>(hCommSock, user));
+				user.strdirpath = "..\\m_filepath\\";//默认路径
+				pDoc->m_linkInfo.myMap.insert(std::pair<SOCKET, myUser>(hCommSock, user));
 				TRACE("wait account");
 			}
 			break;
