@@ -38,6 +38,8 @@ public:
 	void socket_state5_fsm(SOCKET s);
 	void socket_state6_fsm(SOCKET s);
 	void socket_state7_fsm(SOCKET s);
+	BOOL UploadOnce(const char* buf, int length);
+	BOOL RecvOnce(char* buf, int length);
 
 protected:
 	CDisplayView* pView;

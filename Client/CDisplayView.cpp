@@ -72,14 +72,7 @@ void CDisplayView::Dump(CDumpContext& dc) const
 #endif
 #endif //_DEBUG
 
-
 // CDispalyView 消息处理程序
-
-
-
-
-
-
 
 LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -278,128 +271,21 @@ void CDisplayView::OnBnClickedGoback()
 
 void CDisplayView::OnBnClickedUpload()
 {
-	// TODO: 在此添加控件通知处理程序代码
-		//弹出“打开”对话框
-	char szFilters[] = "所有文件 (*.*)|*.*||";
-	CFileDialog fileDlg(TRUE, NULL, NULL,
-		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
-
-	char desktop[MAX_PATH] = { 0 };
-	SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
-	fileDlg.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
-
-	if (fileDlg.DoModal() == IDOK)
-	{
-		CString fileAbsPath = fileDlg.GetPathName();
-		uploadName = fileDlg.GetFileName();
-		if (!(uploadFile.Open(fileAbsPath.GetString(),
-			CFile::modeRead | CFile::typeBinary, &errFile)))
-		{
-			char errOpenFile[256];
-			errFile.GetErrorMessage(errOpenFile, 255);
-			TRACE("\nError occurred while opening file:\n"
-				"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
-				errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
-			ASSERT(FALSE);
-		}
-
-		char sendbuf[MAX_BUF_SIZE] = { 0 };
-		char* temp = sendbuf;
-		sendbuf[0] = 15;
-		temp = &sendbuf[3];
-		nameLength = uploadName.GetLength();
-		*(u_short*)temp = ntohs((u_short)nameLength);
-		memcpy(sendbuf+5, uploadName.GetBuffer(nameLength), nameLength);
-		temp = &sendbuf[(5 + nameLength)];
-		fileLength = uploadFile.GetLength();
-		*(u_long*)temp = ntohl((u_long)fileLength);
-		temp = &sendbuf[1];
-		*(u_short*)temp = ntohs((u_short)(9 + nameLength));
-		leftToSend = fileLength;
-		if (UploadOnce(sendbuf, 9 + nameLength) == FALSE)
-		{
-			DWORD errSend = WSAGetLastError();
-			TRACE("\nError occurred while sending file chunks\n"
-				"\tGetLastError = %d\n", errSend);
-			ASSERT(errSend != WSAEWOULDBLOCK);
-		}
-		uploadName.ReleaseBuffer();
-		client_state = 4;//变为等待上传确认状态
-	}
-}
-
-BOOL CDisplayView::UploadOnce(const char* buf, int length)
-{
-	int leftToSend = length;
-	int bytesSend = 0;
-	int WSAECount = 0;
-
-	do// 单次发送
-	{
-		const char* sendBuf = buf + length - leftToSend;
-		bytesSend = send(hCommSock, sendBuf, leftToSend, 0);
-		if (bytesSend == SOCKET_ERROR)
-		{
-			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
-			bytesSend = 0;
-			WSAECount++;
-			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
-		}
-		leftToSend -= bytesSend;
-	} while (leftToSend > 0);
-
-	return TRUE;
-}
-
-BOOL CDisplayView::RecvOnce(char* buf, int length)
-{
-	int leftToRecv = length;
-	int bytesRecv = 0;
-	int WSAECount = 0;
-
-	do// 单次接收
-	{
-		char* recvBuf = buf + length - leftToRecv;
-		bytesRecv = recv(hCommSock, recvBuf, leftToRecv, 0);
-		if (bytesRecv == SOCKET_ERROR)
-		{
-			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
-			bytesRecv = 0;
-			WSAECount++;
-			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
-		}
-		leftToRecv -= bytesRecv;
-	} while (leftToRecv > 0);
-
-	return TRUE;
-}
-
-void CDisplayView::OnBnClickedDownload()
-{
-	// TODO: 在此添加控件通知处理程序代码
-	FileName.GetText(FileName.GetCurSel(), downloadName); //获得想要下载资源名
-	if (!downloadName.IsEmpty())
-	{
-		//弹出另存为对话框
-		CString fileExt = downloadName.Right(downloadName.GetLength() - downloadName.ReverseFind('.'));
-		char szFilters[32] = { 0 };
-		sprintf_s(szFilters, "(*%s)|*%s||", fileExt.GetString(), fileExt.GetString());
-		CFileDialog fileDlg(FALSE, NULL, downloadName,
+	if (client_state == 3) {
+		char szFilters[] = "所有文件 (*.*)|*.*||";
+		CFileDialog fileDlg(TRUE, NULL, NULL,
 			OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
 
 		char desktop[MAX_PATH] = { 0 };
 		SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
 		fileDlg.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
 
-		if (fileDlg.DoModal() == IDOK)
+		if (fileDlg.DoModal() == IDOK)//弹出“打开”对话框
 		{
 			CString fileAbsPath = fileDlg.GetPathName();
-			if (fileDlg.GetFileExt() == "")
-			{
-				fileAbsPath += fileExt;
-			}
-			if (!(downloadFile.Open(fileAbsPath.GetString(),
-				CFile::modeCreate | CFile::modeWrite | CFile::typeBinary, &errFile)))
+			//uploadName = fileDlg.GetFileName();
+			if (!(uploadFile.Open(fileAbsPath.GetString(),
+				CFile::modeRead | CFile::typeBinary, &errFile)))
 			{
 				char errOpenFile[256];
 				errFile.GetErrorMessage(errOpenFile, 255);
@@ -408,28 +294,85 @@ void CDisplayView::OnBnClickedDownload()
 					errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
 				ASSERT(FALSE);
 			}
-			nameLength = downloadName.GetLength();
+
 			char sendbuf[MAX_BUF_SIZE] = { 0 };
 			char* temp = sendbuf;
-			*(char*)temp = 11;
-			temp = temp + 1;
-			*(u_short*)temp = htons((u_short)(5 + nameLength));
-			temp = temp + 2;
-			*(u_short*)temp = htons((u_short)nameLength);
-			temp = temp + 2;
-			memcpy(temp, downloadName.GetBuffer(nameLength), nameLength);
-			if (UploadOnce(sendbuf, 5 + nameLength) == FALSE)
-			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while sending file chunks\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
-			}
-			downloadName.ReleaseBuffer();
-			client_state = 6;//变为等待下载确认状态
+			u_short namelen = fileAbsPath.GetLength();//此处有可能丢失信息
+			ULONGLONG fileLength = uploadFile.GetLength();//64位
 
+			sendbuf[0] = 15;
+			temp = &sendbuf[3];
+			*(u_short*)temp = ntohs(namelen);
+			strcpy_s(sendbuf + 5, namelen + 1, fileAbsPath);
+			temp = &sendbuf[namelen + 5];
+			*(u_long*)temp = ntohl((u_long)fileLength);//32位，可能会丢失数据
+			temp = &sendbuf[1];
+			*(u_short*)temp = ntohs((u_short)(namelen + 9));
+
+			leftToSend = fileLength;
+			send(hCommSock, sendbuf, namelen + 9, 0);
+
+			client_state = 4;//变为等待上传确认状态
 		}
 	}
+	else;
+	return;
+}
+
+
+void CDisplayView::OnBnClickedDownload()
+{
+	if (client_state == 3) {
+		CString downloadName;
+		FileName.GetText(FileName.GetCurSel(), downloadName); //获得想要下载资源名
+		if (!downloadName.IsEmpty())
+		{
+			//弹出另存为对话框
+			CString fileExt = downloadName.Right(downloadName.GetLength() - downloadName.ReverseFind('.'));
+			char szFilters[32] = { 0 };
+			sprintf_s(szFilters, "(*%s)|*%s||", fileExt.GetString(), fileExt.GetString());
+			CFileDialog fileDlg(FALSE, NULL, downloadName,
+				OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilters);
+
+			char desktop[MAX_PATH] = { 0 };
+			SHGetSpecialFolderPath(NULL, desktop, CSIDL_DESKTOP, FALSE);
+			fileDlg.m_ofn.lpstrInitialDir = desktop;//把默认路径设置为桌面
+
+			if (fileDlg.DoModal() == IDOK)
+			{
+				CString fileAbsPath = fileDlg.GetPathName();
+				if (fileDlg.GetFileExt() == "")
+				{
+					fileAbsPath += fileExt;
+				}
+				if (!(downloadFile.Open(fileAbsPath.GetString(),
+					CFile::modeCreate | CFile::modeWrite | CFile::typeBinary, &errFile)))
+				{
+					char errOpenFile[256];
+					errFile.GetErrorMessage(errOpenFile, 255);
+					TRACE("\nError occurred while opening file:\n"
+						"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
+						errFile.m_strFileName, errOpenFile, errFile.m_cause, errFile.m_lOsError);
+					ASSERT(FALSE);
+				}
+
+				u_short nameLength = downloadName.GetLength();//此处有可能丢失信息
+				char sendbuf[MAX_BUF_SIZE] = { 0 };
+				char* temp = sendbuf;
+				*(char*)temp = 11;
+				temp = temp + 1;
+				*(u_short*)temp = htons(nameLength + 5);
+				temp = temp + 2;
+				*(u_short*)temp = htons(nameLength);
+				strcpy_s(sendbuf + 5, nameLength + 1, downloadName);
+				send(hCommSock, sendbuf, nameLength + 5, 0);
+
+				client_state = 6;//变为等待下载确认状态
+			}
+		}
+	}
+	else;
+	return;
 }
 
 
@@ -446,7 +389,7 @@ void CDisplayView::OnBnClickedDelete()
 			if (AfxMessageBox((CString)"确定要删除这个文件？", 4 + 48) == IDYES)
 			{
 				deleteName = strdirpath.Left(strdirpath.GetLength() - 1) + deleteName;//拼成正确的文件名
-				nameLength = deleteName.GetLength();
+				int nameLength = deleteName.GetLength();
 				sendbuf[0] = 19;
 				temp = &sendbuf[1];
 				*(u_short*)temp = htons((nameLength + 3));
