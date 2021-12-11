@@ -280,7 +280,7 @@ void CDisplayView::OnBnClickedUpload()
 		if (fileDlg.DoModal() == IDOK)//弹出“打开”对话框
 		{
 			CString fileAbsPath = fileDlg.GetPathName();
-			//uploadName = fileDlg.GetFileName();
+			CString uploadName = fileDlg.GetFileName();
 			if (!(uploadFile.Open(fileAbsPath.GetString(),
 				CFile::modeRead | CFile::typeBinary, &errFile)))
 			{
@@ -294,13 +294,13 @@ void CDisplayView::OnBnClickedUpload()
 
 			char sendbuf[MAX_BUF_SIZE] = { 0 };
 			char* temp = sendbuf;
-			u_short namelen = fileAbsPath.GetLength();//此处有可能丢失信息
+			u_short namelen = uploadName.GetLength();//此处有可能丢失信息
 			ULONGLONG fileLength = uploadFile.GetLength();//64位
 
 			sendbuf[0] = 15;
 			temp = &sendbuf[3];
 			*(u_short*)temp = htons(namelen);
-			strcpy_s(sendbuf + 5, namelen + 1, fileAbsPath);
+			strcpy_s(sendbuf + 5, namelen + 1, uploadName);
 			temp = &sendbuf[namelen + 5];
 			*(u_long*)temp = htonl((u_long)fileLength);//32位，可能会丢失数据
 			temp = &sendbuf[1];

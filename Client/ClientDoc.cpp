@@ -274,7 +274,7 @@ void CClientDoc::socket_state4_fsm(SOCKET s)
 			if (recvbuf[3] == 1) {
 				if (pView->leftToSend > 0)
 				{	//第一次发数据报文
-					u_short readChunkSize = pView->uploadFile.Read(chunk_send_buf+6, CHUNK_SIZE-6);
+					u_short readChunkSize = pView->uploadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);
 					temp = chunk_send_buf;
 					pView->sequence = 0;
 
@@ -293,8 +293,8 @@ void CClientDoc::socket_state4_fsm(SOCKET s)
 							"\tGetLastError = %d\n", errSend);
 						ASSERT(errSend != WSAEWOULDBLOCK);
 					}
-
 					pView->leftToSend -= readChunkSize;
+					(pView->sequence)++;//序号递增,表示准备发送下一个数据报文
 				}
 				pView->client_state = 5;
 			}
@@ -327,18 +327,15 @@ void CClientDoc::socket_state5_fsm(SOCKET s)
 
 	switch (event)
 	{
-	case 8://收到正确确认
+	case 8://收到上传确认
 		{
 			if (recvbuf[3] == pView->sequence) {
 
 				if (pView->leftToSend > 0)
-				{
+				{	//准备下一次的数据报文
 					u_short readChunkSize = pView->uploadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);//不会溢出
-					temp = chunk_send_buf;
-					pView->sequence ^= 0x01;//取反，0变1，1变0
-
 					chunk_send_buf[0] = 7;
-					temp = temp + 1;
+					temp = chunk_send_buf + 1;
 					*(u_short*)temp = htons(readChunkSize + 6);
 					temp = temp + 2;
 					*temp = pView->sequence;
@@ -353,10 +350,12 @@ void CClientDoc::socket_state5_fsm(SOCKET s)
 						ASSERT(errSend != WSAEWOULDBLOCK);
 					}
 					pView->leftToSend -= readChunkSize;
+					(pView->sequence)++;//表示准备发送下一个数据报文
 					pView->client_state = 5;
 				}
 				else if (pView->leftToSend == 0) {
-					//printf("Upload finished! Total bytes:%lld\n", pView->fileLength);
+					//close
+					pView->uploadFile.Close();
 					pView->client_state = 3;
 				}
 				else {
@@ -445,27 +444,25 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 		{
 			u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE - 6) ? pView->leftToRecv : CHUNK_SIZE - 6;//#define CHUNK_SIZE 4096
 			if (RecvOnce(chunk_recv_buf, writeChunkSize + 3) == FALSE)//太奇怪了，这里为啥要加3才能收完所有数据？
-			{//奥！因为前面多收了sequence和data_len
-			//淦，还要考虑两个边界，最大只能收4093个
+			{	//奥！因为前面多收了sequence和data_len
+				//淦，还要考虑两个边界，最大只能收4093个
 				DWORD errSend = WSAGetLastError();
 				TRACE("\nError occurred while receiving file chunks\n"
 					"\tGetLastError = %d\n", errSend);
 				ASSERT(errSend != WSAEWOULDBLOCK);
 			}
-			temp = chunk_recv_buf;
-			pView->sequence = *(char*)temp;
-			temp = temp + 1;
+			temp = chunk_recv_buf + 1;
 			u_short data_len = ntohs(*(u_short*)temp);
 			temp = temp + 2;
 			pView->leftToRecv -= data_len;
 			pView->downloadFile.Write(temp, (UINT)data_len);
-
-			temp = sendbuf;
-			*(char*)temp = 8;
-			temp = temp + 1;
+			//发送ack
+			(pView->sequence)++;
+			sendbuf[0] = 8;//char不用转换字节序
+			temp = sendbuf + 1;
 			*(u_short*)temp = htons(4);
 			temp = temp + 2;
-			*(char*)temp = pView->sequence;
+			*temp = pView->sequence;
 			send(s, sendbuf, 4, 0);
 			//收数据的逻辑必须这么写，不然很可能导致死锁，即停在7状态出不去
 			if (pView->leftToRecv > 0) {
@@ -474,6 +471,8 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 			else if(pView->leftToRecv == 0) {
 				//记得要close文件句柄
 				pView->downloadFile.Close();
+				//好像应该重新初始化这个文件，不然会出问题的
+				pView->sequence = 0;
 				pView->client_state = 3;
 			}
 			else {

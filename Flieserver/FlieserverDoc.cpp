@@ -349,51 +349,97 @@ void CFlieserverDoc::state3_fsm(SOCKET hSocket)
 					m_linkInfo.SFMap[hSocket]->errFile.m_strFileName, 
 					errOpenFile, m_linkInfo.SFMap[hSocket]->errFile.m_cause, 
 					m_linkInfo.SFMap[hSocket]->errFile.m_lOsError);
-				ASSERT(FALSE);
+				//ASSERT(FALSE);
 				//回复拒绝下载
 				sendbuf[0] = 12;
 				sendbuf[3] = 0;
 				temp = &sendbuf[1];
 				*(u_short*)temp = htons(4);
+				//m_linkInfo.SUMap[hSocket]->state = 3;
+				//保持主状态不变
 			}
-			//回应允许下载
-			sendbuf[0] = 12;
-			sendbuf[3] = 1;
-			temp = &sendbuf[1];
-			*(u_short*)temp = htons(8);
-			ULONGLONG fileLength = m_linkInfo.SFMap[hSocket]->downloadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
-			m_linkInfo.SFMap[hSocket]->leftToSend = fileLength;
-			temp = &sendbuf[4];
-			*(u_long*)temp = htonl((u_long)fileLength);//32位，可能会丢失数据
-			send(hSocket, sendbuf, 8, 0);
-			//第一次发送数据报文
-			char chunk_send_buf[CHUNK_SIZE] = { 0 };
-
-			u_short readChunkSize = m_linkInfo.SFMap[hSocket]->downloadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);
-			temp = chunk_send_buf;
-			m_linkInfo.SFMap[hSocket]->sequence = 0;
-
-			chunk_send_buf[0] = 7;
-			temp = temp + 1;
-			*(u_short*)temp = htons(readChunkSize + 6);//不可能溢出，因为最大4096+6
-			temp = temp + 2;
-			*temp = m_linkInfo.SFMap[hSocket]->sequence;
-			temp = temp + 1;
-			*(u_short*)temp = htons(readChunkSize);
-
-			if (UploadOnce(hSocket,chunk_send_buf, readChunkSize + 6) == FALSE)
+			else //成功打开
 			{
-				DWORD errSend = WSAGetLastError();
-				TRACE("\nError occurred while sending file chunks\n"
-					"\tGetLastError = %d\n", errSend);
-				ASSERT(errSend != WSAEWOULDBLOCK);
-			}
+				//回应允许下载
+				sendbuf[0] = 12;
+				sendbuf[3] = 1;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(8);
+				ULONGLONG fileLength = m_linkInfo.SFMap[hSocket]->downloadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
+				m_linkInfo.SFMap[hSocket]->leftToSend = fileLength;
+				temp = &sendbuf[4];
+				*(u_long*)temp = htonl((u_long)fileLength);//32位，可能会丢失数据
+				send(hSocket, sendbuf, 8, 0);
+				//第一次发送数据报文
+				char chunk_send_buf[CHUNK_SIZE] = { 0 };
+				u_short readChunkSize = m_linkInfo.SFMap[hSocket]->downloadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);
+				m_linkInfo.SFMap[hSocket]->sequence = 0;
+				chunk_send_buf[0] = 7;
+				temp = chunk_send_buf + 1;
+				*(u_short*)temp = htons(readChunkSize + 6);//不可能溢出，因为最大4096+6
+				temp = temp + 2;
+				*temp = m_linkInfo.SFMap[hSocket]->sequence;
+				temp = temp + 1;
+				*(u_short*)temp = htons(readChunkSize);
 
-			m_linkInfo.SFMap[hSocket]->leftToSend -= readChunkSize;
-			m_linkInfo.SUMap[hSocket]->state = 5;
+				if (UploadOnce(hSocket, chunk_send_buf, readChunkSize + 6) == FALSE)
+				{
+					DWORD errSend = WSAGetLastError();
+					TRACE("\nError occurred while sending file chunks\n"
+						"\tGetLastError = %d\n", errSend);
+					ASSERT(errSend != WSAEWOULDBLOCK);
+				}
+
+				m_linkInfo.SFMap[hSocket]->leftToSend -= readChunkSize;
+				m_linkInfo.SFMap[hSocket]->sequence++;
+				m_linkInfo.SUMap[hSocket]->state = 5;
+			}
 		}
 		break;
 	case 15://请求上传
+		{	
+			temp = recvbuf + 3;
+			u_short namelen = ntohs(*(u_short*)temp);
+			CString uploadName(&recvbuf[5], namelen);//文件名（不包含路径）
+			temp = recvbuf + packet_len - 4;
+			u_long fileLength = ntohl(*(u_long*)temp);
+			m_linkInfo.SFMap[hSocket]->leftToRecv = fileLength;//会自动转换类型
+			//本地打开，接收上传文件
+			if (!(m_linkInfo.SFMap[hSocket]->uploadFile.Open(
+				m_linkInfo.SUMap[hSocket]->strdirpath + uploadName,
+				CFile::modeCreate | CFile::modeWrite | CFile::typeBinary, 
+				&m_linkInfo.SFMap[hSocket]->errFile)))
+			{
+				char errOpenFile[256];
+				m_linkInfo.SFMap[hSocket]->errFile.GetErrorMessage(errOpenFile, 255);
+				TRACE("\nError occurred while opening file:\n"
+					"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
+					m_linkInfo.SFMap[hSocket]->errFile.m_strFileName, errOpenFile, 
+					m_linkInfo.SFMap[hSocket]->errFile.m_cause, 
+					m_linkInfo.SFMap[hSocket]->errFile.m_lOsError);
+				//ASSERT(FALSE);
+				//回复拒绝上传
+				sendbuf[0] = 16;
+				sendbuf[3] = 0;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(4);
+				send(hSocket, sendbuf, 4, 0);
+				//m_linkInfo.SUMap[hSocket]->state = 3;
+				//保持主状态不变
+			}
+			else 
+			{
+				//回复允许上传
+				sendbuf[0] = 16;
+				sendbuf[3] = 1;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(4);
+				send(hSocket, sendbuf, 4, 0);
+				//进入接收上传文件数据状态
+				m_linkInfo.SFMap[hSocket]->sequence = 0;
+				m_linkInfo.SUMap[hSocket]->state = 4;
+			}
+		}
 		break;
 	case 19://请求删除
 		{
@@ -437,7 +483,68 @@ void CFlieserverDoc::state3_fsm(SOCKET hSocket)
 
 void CFlieserverDoc::state4_fsm(SOCKET hSocket)
 {
+	char chunk_recv_buf[CHUNK_SIZE] = { 0 };
+	char sendbuf[MAX_BUF_SIZE] = { 0 };
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = nullptr;
+	char event;
+	u_short packet_len;
+	int strLen = recv(hSocket, recvbuf, 3, 0);
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		packet_len = ntohs(*(u_short*)temp);
+		//assert(packet_len > 3);
+		//此处将要接收数据报文，应该换更大的buf
+	}
+	else return;
 
+	switch (event)
+	{
+	case 7://收到上传数据
+	{
+		u_int writeChunkSize = (m_linkInfo.SFMap[hSocket]->leftToRecv < CHUNK_SIZE - 6) ? m_linkInfo.SFMap[hSocket]->leftToRecv : CHUNK_SIZE - 6;//#define CHUNK_SIZE 4096
+		if (RecvOnce(hSocket,chunk_recv_buf, writeChunkSize + 3) == FALSE)//太奇怪了，这里为啥要加3才能收完所有数据？
+		{//奥！因为前面多收了sequence和data_len
+		//淦，还要考虑两个边界，最大只能收4093个
+			DWORD errSend = WSAGetLastError();
+			TRACE("\nError occurred while receiving file chunks\n"
+				"\tGetLastError = %d\n", errSend);
+			ASSERT(errSend != WSAEWOULDBLOCK);
+		}
+		//数据报文中的序号被我忽略了，按理说，可以做一个判断
+		temp = chunk_recv_buf + 1;
+		u_short data_len = ntohs(*(u_short*)temp);
+		temp = temp + 2;
+		m_linkInfo.SFMap[hSocket]->leftToRecv -= data_len;
+		m_linkInfo.SFMap[hSocket]->uploadFile.Write(temp, (UINT)data_len);
+		// 发送ack
+		(m_linkInfo.SFMap[hSocket]->sequence)++;//序号递增，编译器默认为unsigned char，溢出也无所谓
+		sendbuf[0] = 8;//char不用转换字节序
+		temp = sendbuf + 1;
+		*(u_short*)temp = htons(4);
+		temp = temp + 2;
+		*temp = m_linkInfo.SFMap[hSocket]->sequence;//表示期待下一个报文
+		send(hSocket, sendbuf, 4, 0);
+		//收数据的逻辑必须这么写，不然很可能导致死锁，即停在4状态出不去
+		if (m_linkInfo.SFMap[hSocket]->leftToRecv > 0) {
+			m_linkInfo.SUMap[hSocket]->state = 4;
+		}
+		else if (m_linkInfo.SFMap[hSocket]->leftToRecv == 0) {
+			//记得要close文件句柄
+			m_linkInfo.SFMap[hSocket]->uploadFile.Close();
+			//好像应该重新初始化这个文件，不然会出问题的
+			m_linkInfo.SFMap[hSocket]->sequence = 0;
+			m_linkInfo.SUMap[hSocket]->state = 3;
+		}
+		else {
+			TRACE("leftToSend error!!!/n");
+		}
+	}
+	break;
+	default:
+		break;
+	}
 }
 
 
@@ -461,21 +568,18 @@ void CFlieserverDoc::state5_fsm(SOCKET hSocket)
 
 	switch (event)
 	{
-	case 8://收到正确确认
+	case 8://收到下载确认
 	{
 		if (recvbuf[3] == m_linkInfo.SFMap[hSocket]->sequence) {
 
 			if (m_linkInfo.SFMap[hSocket]->leftToSend > 0)
 			{
 				u_short readChunkSize = m_linkInfo.SFMap[hSocket]->downloadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);//不会溢出
-				temp = chunk_send_buf;
-				m_linkInfo.SFMap[hSocket]->sequence ^= 0x01;//取反，0变1，1变0
-
 				chunk_send_buf[0] = 7;
-				temp = temp + 1;
+				temp = chunk_send_buf + 1;
 				*(u_short*)temp = htons(readChunkSize + 6);
 				temp = temp + 2;
-				*temp = m_linkInfo.SFMap[hSocket]->sequence;
+				*temp = m_linkInfo.SFMap[hSocket]->sequence;//暂时忽略数据报文的序号
 				temp = temp + 1;
 				*(u_short*)temp = htons(readChunkSize);
 
@@ -487,12 +591,15 @@ void CFlieserverDoc::state5_fsm(SOCKET hSocket)
 					ASSERT(errSend != WSAEWOULDBLOCK);
 				}
 				m_linkInfo.SFMap[hSocket]->leftToSend -= readChunkSize;
+				(m_linkInfo.SFMap[hSocket]->sequence)++;//只要发送数据报文就递增
 				m_linkInfo.SUMap[hSocket]->state = 5;
 			}
 			else if (m_linkInfo.SFMap[hSocket]->leftToSend == 0) {
 				//全部发送完成，并收到了所有确认
 				//记得要close文件句柄
 				m_linkInfo.SFMap[hSocket]->downloadFile.Close();
+				//好像应该重新初始化这个文件，不然会出问题的
+				m_linkInfo.SFMap[hSocket]->sequence = 0;
 				m_linkInfo.SUMap[hSocket]->state = 3;
 			}
 			else {
