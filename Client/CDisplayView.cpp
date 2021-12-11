@@ -385,7 +385,8 @@ void CDisplayView::OnBnClickedDelete()
 		{
 			if (AfxMessageBox((CString)"确定要删除这个文件？", 4 + 48) == IDYES)
 			{
-				deleteName = strdirpath.Left(strdirpath.GetLength() - 1) + deleteName;//拼成正确的文件名
+				//deleteName = strdirpath.Left(strdirpath.GetLength() - 1) + deleteName;//拼成正确的文件名
+				//得了，别带路径啦
 				int nameLength = deleteName.GetLength();
 				sendbuf[0] = 19;
 				temp = &sendbuf[1];

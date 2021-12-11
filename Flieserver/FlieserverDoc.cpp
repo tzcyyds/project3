@@ -443,19 +443,10 @@ void CFlieserverDoc::state3_fsm(SOCKET hSocket)
 		break;
 	case 19://请求删除
 		{
-			CString m_filename(&recvbuf[3], packet_len - 3);
-			if (remove(m_filename) == -1)
-			{
-				TRACE("\nError occurred while deleting file:\n");
-				sendbuf[0] = 20;
-				temp = &sendbuf[1];
-				*(u_short*)temp = htons(5);
-				sendbuf[3] = 0;
-				sendbuf[4] = 0;
-				send(hSocket, sendbuf, 5, 0);
-			}
-			else
-			{
+			CString m_filename(&recvbuf[3], packet_len - 3);//不带路径的文件名
+			m_filename = m_linkInfo.SUMap[hSocket]->strdirpath + m_filename;//带路径的文件名
+			if (DeleteFile(m_filename))//WIN32 API
+			{//成功
 				sendbuf[0] = 20;
 				temp = &sendbuf[1];
 				*(u_short*)temp = htons(5);
@@ -473,6 +464,16 @@ void CFlieserverDoc::state3_fsm(SOCKET hSocket)
 				//使用strcpy,长度全都需要+1！
 				strcpy_s(&recvbuf[3], strLen + 1, m_send);
 				send(hSocket, recvbuf, strLen + 3, 0);
+			}
+			else
+			{
+				TRACE("\nError occurred while deleting file:\n");
+				sendbuf[0] = 20;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(5);
+				sendbuf[3] = 0;
+				sendbuf[4] = 0;
+				send(hSocket, sendbuf, 5, 0);
 			}
 		}
 		break;
