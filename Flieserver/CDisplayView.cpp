@@ -6,12 +6,7 @@
 #include "CDisplayView.h"
 #include "FlieserverDoc.h"
 
-
 #define WM_SOCK WM_USER + 100// 自定义消息，为避免冲突，最好100以上
-constexpr auto MAX_BUF_SIZE = 128;
-#define CHUNK_SIZE 4096
-#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
-
 // CDispalyView
 
 IMPLEMENT_DYNCREATE(CDisplayView, CFormView)

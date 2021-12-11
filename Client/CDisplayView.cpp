@@ -9,9 +9,6 @@
 
 // CDispalyView
 #define WM_SOCK WM_USER + 100// 自定义消息，在WM_USER的基础上进行
-#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
-constexpr auto MAX_BUF_SIZE = 100;
-
 
 IMPLEMENT_DYNCREATE(CDisplayView, CFormView)
 

@@ -12,10 +12,6 @@
 
 #include "FlieserverDoc.h"
 
-#define CHUNK_SIZE 4096
-constexpr auto MAX_BUF_SIZE = 128;
-#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
-
 using namespace std;
 stringstream sstream;
 #ifdef _DEBUG
@@ -495,6 +491,8 @@ void CFlieserverDoc::state5_fsm(SOCKET hSocket)
 			}
 			else if (m_linkInfo.SFMap[hSocket]->leftToSend == 0) {
 				//全部发送完成，并收到了所有确认
+				//记得要close文件句柄
+				m_linkInfo.SFMap[hSocket]->downloadFile.Close();
 				m_linkInfo.SUMap[hSocket]->state = 3;
 			}
 			else {

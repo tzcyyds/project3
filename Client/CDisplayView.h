@@ -2,7 +2,7 @@
 
 #include "pch.h"
 
-#define CHUNK_SIZE 4096
+
 // CDispalyView 窗体视图
 
 class CDisplayView : public CFormView

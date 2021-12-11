@@ -13,5 +13,8 @@
 #include <propkey.h>
 #include <sstream>
 #include <unordered_map>
-
+//view和doc共用的表达式/宏
+constexpr auto MAX_WSAE_TIMES = 10;// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
+constexpr auto CHUNK_SIZE = 4096;
+constexpr auto MAX_BUF_SIZE = 256;
 #endif //PCH_H

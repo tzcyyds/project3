@@ -19,9 +19,6 @@
 #endif
 
 
-#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
-#define CHUNK_SIZE 4096
-constexpr auto MAX_BUF_SIZE = 100;
 // CClientDoc
 
 IMPLEMENT_DYNCREATE(CClientDoc, CDocument)
@@ -246,7 +243,7 @@ void CClientDoc::socket_state3_fsm(SOCKET s)
 	default:
 		break;
 	}
-
+	return;
 }
 
 void CClientDoc::socket_state4_fsm(SOCKET s)
@@ -446,9 +443,10 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 	{
 	case 7://收到下载数据
 		{
-			u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE) ? pView->leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
+			u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE - 6) ? pView->leftToRecv : CHUNK_SIZE - 6;//#define CHUNK_SIZE 4096
 			if (RecvOnce(chunk_recv_buf, writeChunkSize + 3) == FALSE)//太奇怪了，这里为啥要加3才能收完所有数据？
-			{//奥！因为前面多收了sequence和data_len？
+			{//奥！因为前面多收了sequence和data_len
+			//淦，还要考虑两个边界，最大只能收4093个
 				DWORD errSend = WSAGetLastError();
 				TRACE("\nError occurred while receiving file chunks\n"
 					"\tGetLastError = %d\n", errSend);
@@ -474,6 +472,8 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 				pView->client_state = 7;
 			}
 			else if(pView->leftToRecv == 0) {
+				//记得要close文件句柄
+				pView->downloadFile.Close();
 				pView->client_state = 3;
 			}
 			else {
