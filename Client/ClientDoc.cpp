@@ -357,6 +357,7 @@ void CClientDoc::socket_state5_fsm(SOCKET s)
 					//close
 					pView->uploadFile.Close();
 					pView->client_state = 3;
+					//肯定是发方先回到主状态，此时还有一个悬而未决的ack报文，必须处理，否则会阻碍后续的传输？？不会，那个ack被扔了
 				}
 				else {
 					TRACE("leftToSend error!!!/n");

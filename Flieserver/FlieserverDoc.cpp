@@ -493,7 +493,7 @@ void CFlieserverDoc::state4_fsm(SOCKET hSocket)
 	if (strLen == 3) {
 		event = recvbuf[0];
 		temp = &recvbuf[1];
-		packet_len = ntohs(*(u_short*)temp);
+		packet_len = ntohs(*(u_short*)temp);//此处用不到
 		//assert(packet_len > 3);
 		//此处将要接收数据报文，应该换更大的buf
 	}
@@ -536,6 +536,17 @@ void CFlieserverDoc::state4_fsm(SOCKET hSocket)
 			//好像应该重新初始化这个文件，不然会出问题的
 			m_linkInfo.SFMap[hSocket]->sequence = 0;
 			m_linkInfo.SUMap[hSocket]->state = 3;
+
+			//上传完成，应该立即向client发送一次目录，此处利用了recvbuf
+			recvbuf[0] = 6;
+			temp = &recvbuf[1];
+			CString m_send = PathtoList(m_linkInfo.SUMap[hSocket]->strdirpath + '*'); // 发送该目录下的文件列表给客户端，目录已经有"\\*"了
+			strLen = m_send.GetLength();//重新使用strLen
+			assert(strLen > 0);//若为空目录，则要特殊处理
+			*(u_short*)temp = htons(strLen + 3);
+			//使用strcpy,长度全都需要+1！
+			strcpy_s(&recvbuf[3], strLen + 1, m_send);
+			send(hSocket, recvbuf, strLen + 3, 0);
 		}
 		else {
 			TRACE("leftToSend error!!!/n");
