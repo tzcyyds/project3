@@ -15,12 +15,11 @@ class Fileinfo
 {
 public:
 	// 通用
+	CFileException errFile;
 	CHAR sequence = 0;
-
 	// 上传文件相关
 	CFile uploadFile;
 	ULONGLONG leftToSend = 0;
-
 	// 下载文件相关
 	CFile downloadFile;
 	ULONGLONG leftToRecv = 0;

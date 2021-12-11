@@ -113,28 +113,24 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 				case 0://质询出错
 					break;
 				case 1://等待用户名，并发送质询
-					pDoc->fsm_Challenge(hSocket);
+					pDoc->state1_fsm(hSocket);
 					//连接建立状态
 					break;
 				case 2://等待质询结果
-					pDoc->fsm_HandleRes(hSocket);
+					pDoc->state2_fsm(hSocket);
 					//等待质询结果状态
 					break;
 				case 3:
 					//用户已在线，等待其它指令。
-					pDoc->MainState_fsm(hSocket);//调用主状态处理函数
+					pDoc->state3_fsm(hSocket);//调用主状态处理函数
 					break;
 				case 4:
 					//在接收上传文件数据状态，接收数据
-					pDoc->Recvfile(hSocket);
+					pDoc->state4_fsm(hSocket);
 					break;
 				case 5:
-					//已收到下载命令，等待开始传输
-					pDoc->WaitUpload(hSocket);
-					break;
-				case 6:
-					//等待下载数据确认
-					pDoc->WaitAck(hSocket);
+					//等待下载数据确认状态
+					pDoc->state5_fsm(hSocket);
 					break;
 				default:
 					break;

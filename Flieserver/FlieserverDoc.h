@@ -19,12 +19,14 @@ public:
 // 操作
 public:
 	CString PathtoList(CString path);
-	void fsm_Challenge(SOCKET hSocket);
-	void fsm_HandleRes(SOCKET hSocket);
-	void MainState_fsm(SOCKET hSocket);
-	void Recvfile(SOCKET hSocket);
-	void WaitUpload(SOCKET hSocket);
-	void WaitAck(SOCKET hSocket);
+	BOOL UploadOnce(SOCKET hSocket,const char* buf, u_int length);
+	BOOL RecvOnce(SOCKET hSocket,char* buf, u_int length);
+
+	void state1_fsm(SOCKET hSocket);
+	void state2_fsm(SOCKET hSocket);
+	void state3_fsm(SOCKET hSocket);
+	void state4_fsm(SOCKET hSocket);
+	void state5_fsm(SOCKET hSocket);
 
 // 重写
 public:

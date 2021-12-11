@@ -42,7 +42,7 @@ CClientDoc::~CClientDoc()
 {
 }
 
-BOOL CClientDoc::UploadOnce(const char* buf, int length)
+BOOL CClientDoc::UploadOnce(const char* buf, u_int length)
 {
 	//此时pView应该是对的，不用再刷新了
 	//POSITION pos = GetFirstViewPosition();
@@ -69,7 +69,7 @@ BOOL CClientDoc::UploadOnce(const char* buf, int length)
 	return TRUE;
 }
 
-BOOL CClientDoc::RecvOnce(char* buf, int length)
+BOOL CClientDoc::RecvOnce(char* buf, u_int length)
 {
 	//此时pView应该是对的，不用再刷新了
 	//POSITION pos = GetFirstViewPosition();
@@ -276,18 +276,18 @@ void CClientDoc::socket_state4_fsm(SOCKET s)
 		{
 			if (recvbuf[3] == 1) {
 				if (pView->leftToSend > 0)
-				{//发数据报文
-					int readChunkSize = pView->uploadFile.Read(chunk_send_buf+6, CHUNK_SIZE-6);
+				{	//第一次发数据报文
+					u_short readChunkSize = pView->uploadFile.Read(chunk_send_buf+6, CHUNK_SIZE-6);
 					temp = chunk_send_buf;
 					pView->sequence = 0;
 
-					*(char*)temp = 7;
+					chunk_send_buf[0] = 7;
 					temp = temp + 1;
-					*(u_short*)temp = 6 + (u_short)readChunkSize;
+					*(u_short*)temp = htons(readChunkSize + 6);//不可能溢出，因为最大4096+6
 					temp = temp + 2;
-					*(char*)temp = pView->sequence;
+					*temp = pView->sequence;
 					temp = temp + 1;
-					*(u_short*)temp = (u_short)readChunkSize;
+					*(u_short*)temp = htons(readChunkSize);
 
 					if (UploadOnce(chunk_send_buf, readChunkSize + 6) == FALSE)
 					{
@@ -336,17 +336,17 @@ void CClientDoc::socket_state5_fsm(SOCKET s)
 
 				if (pView->leftToSend > 0)
 				{
-					int readChunkSize = pView->uploadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);
+					u_short readChunkSize = pView->uploadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);//不会溢出
 					temp = chunk_send_buf;
 					pView->sequence ^= 0x01;//取反，0变1，1变0
 
-					*(char*)temp = 7;
+					chunk_send_buf[0] = 7;
 					temp = temp + 1;
-					*(u_short*)temp = 6 + (u_short)readChunkSize;
+					*(u_short*)temp = htons(readChunkSize + 6);
 					temp = temp + 2;
-					*(char*)temp = pView->sequence;
+					*temp = pView->sequence;
 					temp = temp + 1;
-					*(u_short*)temp = (u_short)readChunkSize;
+					*(u_short*)temp = htons(readChunkSize);
 
 					if (UploadOnce(chunk_send_buf, readChunkSize + 6) == FALSE)
 					{
@@ -406,25 +406,13 @@ void CClientDoc::socket_state6_fsm(SOCKET s)
 			if (recvbuf[3] == 1) {
 				temp = &recvbuf[4];
 				pView->leftToRecv = ntohl(*(u_long*)temp);
-				//char sendbuf[MAX_BUF_SIZE] = { 0 };
-				//temp = sendbuf;
-				//*(char*)temp = 13;
-				//temp = temp + 1;
-				//*(u_short*)temp = htons(4);
-				//temp = temp + 2;
-				//*(char*)temp = 1;
-				//if (pView->UploadOnce(sendbuf, 4) == FALSE)
-				//{
-				//	DWORD errSend = WSAGetLastError();
-				//	TRACE("\nError occurred while sending file chunks\n"
-				//		"\tGetLastError = %d\n", errSend);
-				//	ASSERT(errSend != WSAEWOULDBLOCK);
-				//}
 				pView->sequence = 0;
-				pView->client_state = 7;
+				socket_state7_fsm(s);
+				//pView->client_state = 7;
 			}
 			else {
 				//服务器拒绝下载请求
+				pView->client_state = 3;
 			}
 		}
 		break;
@@ -449,7 +437,7 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 		event = recvbuf[0];
 		temp = &recvbuf[1];
 		packet_len = ntohs(*(u_short*)temp);
-		assert(packet_len > 3);
+		//assert(packet_len > 3);
 		//此处将要接收数据报文，应该换更大的buf
 	}
 	else return;
@@ -459,8 +447,8 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 	case 7://收到下载数据
 		{
 			u_int writeChunkSize = (pView->leftToRecv < CHUNK_SIZE) ? pView->leftToRecv : CHUNK_SIZE;//#define CHUNK_SIZE 4096
-			if (RecvOnce(chunk_recv_buf, writeChunkSize) == FALSE)
-			{
+			if (RecvOnce(chunk_recv_buf, writeChunkSize + 3) == FALSE)//太奇怪了，这里为啥要加3才能收完所有数据？
+			{//奥！因为前面多收了sequence和data_len？
 				DWORD errSend = WSAGetLastError();
 				TRACE("\nError occurred while receiving file chunks\n"
 					"\tGetLastError = %d\n", errSend);
@@ -481,12 +469,15 @@ void CClientDoc::socket_state7_fsm(SOCKET s)
 			temp = temp + 2;
 			*(char*)temp = pView->sequence;
 			send(s, sendbuf, 4, 0);
-
+			//收数据的逻辑必须这么写，不然很可能导致死锁，即停在7状态出不去
 			if (pView->leftToRecv > 0) {
 				pView->client_state = 7;
 			}
-			else {
+			else if(pView->leftToRecv == 0) {
 				pView->client_state = 3;
+			}
+			else {
+				TRACE("leftToSend error!!!/n");
 			}
 		}
 		break;

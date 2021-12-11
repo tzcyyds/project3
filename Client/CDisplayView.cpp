@@ -302,12 +302,12 @@ void CDisplayView::OnBnClickedUpload()
 
 			sendbuf[0] = 15;
 			temp = &sendbuf[3];
-			*(u_short*)temp = ntohs(namelen);
+			*(u_short*)temp = htons(namelen);
 			strcpy_s(sendbuf + 5, namelen + 1, fileAbsPath);
 			temp = &sendbuf[namelen + 5];
-			*(u_long*)temp = ntohl((u_long)fileLength);//32位，可能会丢失数据
+			*(u_long*)temp = htonl((u_long)fileLength);//32位，可能会丢失数据
 			temp = &sendbuf[1];
-			*(u_short*)temp = ntohs((u_short)(namelen + 9));
+			*(u_short*)temp = htons((u_short)(namelen + 9));
 
 			leftToSend = fileLength;
 			send(hCommSock, sendbuf, namelen + 9, 0);
@@ -364,7 +364,7 @@ void CDisplayView::OnBnClickedDownload()
 				*(u_short*)temp = htons(nameLength + 5);
 				temp = temp + 2;
 				*(u_short*)temp = htons(nameLength);
-				strcpy_s(sendbuf + 5, nameLength + 1, downloadName);
+				strcpy_s(sendbuf + 5, nameLength + 1, downloadName);//downloadName不应该包含路径
 				send(hCommSock, sendbuf, nameLength + 5, 0);
 
 				client_state = 6;//变为等待下载确认状态

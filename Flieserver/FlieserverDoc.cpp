@@ -12,8 +12,9 @@
 
 #include "FlieserverDoc.h"
 
-
+#define CHUNK_SIZE 4096
 constexpr auto MAX_BUF_SIZE = 128;
+#define MAX_WSAE_TIMES 10// 单次发送或接收过程中所允许出现WSAEWOULDBLOCK的最大次数
 
 using namespace std;
 stringstream sstream;
@@ -76,7 +77,61 @@ CString CFlieserverDoc::PathtoList(CString path = "..\\m_filepath\\*") // 获取
 	}
 	return file_list;
 }
-void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
+
+BOOL CFlieserverDoc::UploadOnce(SOCKET hSocket,const char* buf, u_int length)
+{
+	//此时pView应该是对的，不用再刷新了
+	//POSITION pos = GetFirstViewPosition();
+	//pView = (CDisplayView*)GetNextView(pos);
+
+	int leftToSend = length;
+	int bytesSend = 0;
+	int WSAECount = 0;
+
+	do// 单次发送
+	{
+		const char* sendBuf = buf + bytesSend;
+		bytesSend = send(hSocket, sendBuf, leftToSend, 0);
+		if (bytesSend == SOCKET_ERROR)
+		{
+			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
+			bytesSend = 0;
+			WSAECount++;
+			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
+		}
+		leftToSend -= bytesSend;
+	} while (leftToSend > 0);
+
+	return TRUE;
+}
+
+BOOL CFlieserverDoc::RecvOnce(SOCKET hSocket,char* buf, u_int length)
+{
+	//此时pView应该是对的，不用再刷新了
+	//POSITION pos = GetFirstViewPosition();
+	//pView = (CDisplayView*)GetNextView(pos);
+	int leftToRecv = length;
+	int bytesRecv = 0;
+	int WSAECount = 0;
+
+	do// 单次接收
+	{
+		char* recvBuf = buf + bytesRecv;
+		bytesRecv = recv(hSocket, recvBuf, leftToRecv, 0);
+		if (bytesRecv == SOCKET_ERROR)
+		{
+			ASSERT(WSAGetLastError() == WSAEWOULDBLOCK);
+			bytesRecv = 0;
+			WSAECount++;
+			if (WSAECount > MAX_WSAE_TIMES) return FALSE;
+		}
+		leftToRecv -= bytesRecv;
+	} while (leftToRecv > 0);
+
+	return TRUE;
+}
+
+void CFlieserverDoc::state1_fsm(SOCKET hSocket)
 {
 	char sendbuf[MAX_BUF_SIZE] = { 0 };
 	char recvbuf[MAX_BUF_SIZE] = { 0 };
@@ -159,7 +214,7 @@ void CFlieserverDoc::fsm_Challenge(SOCKET hSocket)
 	return;
 }
 
-void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
+void CFlieserverDoc::state2_fsm(SOCKET hSocket)
 {
 	POSITION pos = GetFirstViewPosition();
 	pView = (CDisplayView*)GetNextView(pos);
@@ -237,7 +292,7 @@ void CFlieserverDoc::fsm_HandleRes(SOCKET hSocket)
 	return;
 }
 
-void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
+void CFlieserverDoc::state3_fsm(SOCKET hSocket)
 {
 	//POSITION pos = GetFirstViewPosition();
 	//pView = (CDisplayView*)GetNextView(pos);
@@ -282,6 +337,65 @@ void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 		}
 		break;
 	case 11://请求下载
+		{
+			temp = recvbuf + 3;
+			u_short namelen = ntohs(*(u_short*)temp);
+			CString downloadName(&recvbuf[5], namelen);
+			//本地打开文件
+			if (!(m_linkInfo.SFMap[hSocket]->downloadFile.Open(
+				m_linkInfo.SUMap[hSocket]->strdirpath + downloadName,
+				CFile::modeRead | CFile::typeBinary, &m_linkInfo.SFMap[hSocket]->errFile)))
+			{
+				char errOpenFile[256];
+				m_linkInfo.SFMap[hSocket]->errFile.GetErrorMessage(errOpenFile, 255);
+				TRACE("\nError occurred while opening file:\n"
+					"\tFile name: %s\n\tCause: %s\n\tm_cause = %d\n\t m_IOsError = %d\n",
+					m_linkInfo.SFMap[hSocket]->errFile.m_strFileName, 
+					errOpenFile, m_linkInfo.SFMap[hSocket]->errFile.m_cause, 
+					m_linkInfo.SFMap[hSocket]->errFile.m_lOsError);
+				ASSERT(FALSE);
+				//回复拒绝下载
+				sendbuf[0] = 12;
+				sendbuf[3] = 0;
+				temp = &sendbuf[1];
+				*(u_short*)temp = htons(4);
+			}
+			//回应允许下载
+			sendbuf[0] = 12;
+			sendbuf[3] = 1;
+			temp = &sendbuf[1];
+			*(u_short*)temp = htons(8);
+			ULONGLONG fileLength = m_linkInfo.SFMap[hSocket]->downloadFile.GetLength();//约定文件长度用ULONGLONG存储，长度是8个字节
+			m_linkInfo.SFMap[hSocket]->leftToSend = fileLength;
+			temp = &sendbuf[4];
+			*(u_long*)temp = htonl((u_long)fileLength);//32位，可能会丢失数据
+			send(hSocket, sendbuf, 8, 0);
+			//第一次发送数据报文
+			char chunk_send_buf[CHUNK_SIZE] = { 0 };
+
+			u_short readChunkSize = m_linkInfo.SFMap[hSocket]->downloadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);
+			temp = chunk_send_buf;
+			m_linkInfo.SFMap[hSocket]->sequence = 0;
+
+			chunk_send_buf[0] = 7;
+			temp = temp + 1;
+			*(u_short*)temp = htons(readChunkSize + 6);//不可能溢出，因为最大4096+6
+			temp = temp + 2;
+			*temp = m_linkInfo.SFMap[hSocket]->sequence;
+			temp = temp + 1;
+			*(u_short*)temp = htons(readChunkSize);
+
+			if (UploadOnce(hSocket,chunk_send_buf, readChunkSize + 6) == FALSE)
+			{
+				DWORD errSend = WSAGetLastError();
+				TRACE("\nError occurred while sending file chunks\n"
+					"\tGetLastError = %d\n", errSend);
+				ASSERT(errSend != WSAEWOULDBLOCK);
+			}
+
+			m_linkInfo.SFMap[hSocket]->leftToSend -= readChunkSize;
+			m_linkInfo.SUMap[hSocket]->state = 5;
+		}
 		break;
 	case 15://请求上传
 		break;
@@ -325,18 +439,78 @@ void CFlieserverDoc::MainState_fsm(SOCKET hSocket)
 	}
 }
 
-void CFlieserverDoc::Recvfile(SOCKET hSocket)
+void CFlieserverDoc::state4_fsm(SOCKET hSocket)
 {
 
 }
 
-void CFlieserverDoc::WaitUpload(SOCKET hSocket)
-{
 
-}
-
-void CFlieserverDoc::WaitAck(SOCKET hSocket)
+void CFlieserverDoc::state5_fsm(SOCKET hSocket)
 {
+	char chunk_send_buf[CHUNK_SIZE] = { 0 };
+	char recvbuf[MAX_BUF_SIZE] = { 0 };
+	char* temp = nullptr;
+	char event;
+	u_short packet_len;
+	int strLen = recv(hSocket, recvbuf, 3, 0);
+	if (strLen == 3) {
+		event = recvbuf[0];
+		temp = &recvbuf[1];
+		packet_len = ntohs(*(u_short*)temp);
+		assert(packet_len > 3);
+		strLen = recv(hSocket, recvbuf + 3, packet_len - 3, 0);
+		assert(strLen == packet_len - 3);
+	}
+	else return;
+
+	switch (event)
+	{
+	case 8://收到正确确认
+	{
+		if (recvbuf[3] == m_linkInfo.SFMap[hSocket]->sequence) {
+
+			if (m_linkInfo.SFMap[hSocket]->leftToSend > 0)
+			{
+				u_short readChunkSize = m_linkInfo.SFMap[hSocket]->downloadFile.Read(chunk_send_buf + 6, CHUNK_SIZE - 6);//不会溢出
+				temp = chunk_send_buf;
+				m_linkInfo.SFMap[hSocket]->sequence ^= 0x01;//取反，0变1，1变0
+
+				chunk_send_buf[0] = 7;
+				temp = temp + 1;
+				*(u_short*)temp = htons(readChunkSize + 6);
+				temp = temp + 2;
+				*temp = m_linkInfo.SFMap[hSocket]->sequence;
+				temp = temp + 1;
+				*(u_short*)temp = htons(readChunkSize);
+
+				if (UploadOnce(hSocket,chunk_send_buf, readChunkSize + 6) == FALSE)
+				{
+					DWORD errSend = WSAGetLastError();
+					TRACE("\nError occurred while sending file chunks\n"
+						"\tGetLastError = %d\n", errSend);
+					ASSERT(errSend != WSAEWOULDBLOCK);
+				}
+				m_linkInfo.SFMap[hSocket]->leftToSend -= readChunkSize;
+				m_linkInfo.SUMap[hSocket]->state = 5;
+			}
+			else if (m_linkInfo.SFMap[hSocket]->leftToSend == 0) {
+				//全部发送完成，并收到了所有确认
+				m_linkInfo.SUMap[hSocket]->state = 3;
+			}
+			else {
+				TRACE("leftToSend error!!!/n");
+			}
+		}
+		else {
+			//报文序号错误，不予发送下一个
+		}
+	}
+	break;
+	case 9://收到重传确认
+		break;
+	default:
+		break;
+	}
 
 }
 
