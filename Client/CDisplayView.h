@@ -33,7 +33,7 @@ public:
 	CString m_user;
 	CString m_password;
 	CListBox FileName;
-	CIPAddressCtrl ServerIP;
+	//CIPAddressCtrl ServerIP;
 	DWORD m_ip;
 	// server port
 	UINT m_SPort;

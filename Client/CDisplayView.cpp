@@ -36,7 +36,7 @@ void CDisplayView::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT2, m_user);
 	DDX_Text(pDX, IDC_EDIT3, m_password);
 	DDX_Control(pDX, IDC_LIST1, FileName);
-	DDX_Control(pDX, IDC_IPADDRESS1, ServerIP);
+	//DDX_Control(pDX, IDC_IPADDRESS1, ServerIP);
 	DDX_IPAddress(pDX, IDC_IPADDRESS1, m_ip);
 	DDX_Text(pDX, IDC_EDIT4, m_SPort);
 	DDX_Text(pDX, IDC_EDIT5, m_LPort);
@@ -126,10 +126,11 @@ LRESULT CDisplayView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 void CDisplayView::OnBnClickedConnect()
 {
+	UpdateData(TRUE);//刷新IP,端口，用户名和密码
 	if (client_state == 0) {
 		char sendbuf[MAX_BUF_SIZE] = { 0 };
 		CClientDoc* pDoc = (CClientDoc*)GetDocument();
-
+		
 		// 判断异常情况
 		if (m_ip == NULL)
 		{
@@ -179,7 +180,7 @@ void CDisplayView::OnBnClickedConnect()
 
 		//发送用户名报文
 		sendbuf[0] = 1;//填写事件号
-		UpdateData(TRUE);//刷新用户名和密码
+		
 		int strLen = m_user.GetLength();
 		sendbuf[3] = strLen % 256;//填写字符串长度（用户名字符串长度需要小于256）
 		memcpy(sendbuf + 4, m_user, strLen);//填写用户名字符串
