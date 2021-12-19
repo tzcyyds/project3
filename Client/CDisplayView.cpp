@@ -170,7 +170,7 @@ void CDisplayView::OnBnClickedConnect()
 			MessageBox("connect() failed", "Client", MB_OK);
 			exit(1);
 		}
-
+		//理论上这里的connect是阻塞的，但是winsock的实现是3秒延时，超时就返回错误。
 		if (WSAAsyncSelect(hCommSock, m_hWnd, WM_SOCK, FD_READ | FD_CLOSE) == SOCKET_ERROR)
 		{
 			MessageBox("WSAAsyncSelect() failed", "Client", MB_OK);

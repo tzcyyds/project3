@@ -177,7 +177,7 @@ void CDisplayView::OnBnClickedListen()
 		MessageBox("WSAAsyncSelect() failed", "Server", MB_OK);
 		exit(1);
 	}
-	TRACE("init finish");
+	TRACE("init finish");//微软的文档里说：如果对监听套接字用了WSAAsyncSelect，则其创建的子套接字也会被自动设置一遍。
 }
 
 
