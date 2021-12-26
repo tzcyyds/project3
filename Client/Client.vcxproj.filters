@@ -30,13 +30,13 @@
     <ClInclude Include="ClientDoc.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ClientView.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="pch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CDisplayView.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,10 +50,10 @@
     <ClCompile Include="ClientDoc.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="ClientView.cpp">
+    <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="CDisplayView.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

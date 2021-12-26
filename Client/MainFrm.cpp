@@ -8,6 +8,11 @@
 
 #include "MainFrm.h"
 
+#include "CDisplayView.h"
+
+#include "shlwapi.h"
+#pragma comment(lib,"shlwapi.lib")
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -44,13 +49,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	if (!m_wndStatusBar.Create(this))
-	{
-		TRACE0("未能创建状态栏\n");
-		return -1;      // 未能创建
-	}
-	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
-
 	return 0;
 }
 
@@ -60,9 +58,11 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 		return FALSE;
 	// TODO: 在此处通过修改
 	//  CREATESTRUCT cs 来修改窗口类或样式
-
+	cs.cx = 980;
+	cs.cy = 820;
 	return TRUE;
 }
+
 
 // CMainFrame 诊断
 

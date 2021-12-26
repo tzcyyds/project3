@@ -30,13 +30,16 @@
     <ClInclude Include="FlieserverDoc.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="FlieserverView.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="pch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CDisplayView.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyUser.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,10 +53,13 @@
     <ClCompile Include="FlieserverDoc.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="FlieserverView.cpp">
+    <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="CDisplayView.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyUser.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

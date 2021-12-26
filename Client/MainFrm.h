@@ -20,7 +20,6 @@ public:
 // 重写
 public:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-
 // 实现
 public:
 	virtual ~CMainFrame();
@@ -28,9 +27,6 @@ public:
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
 #endif
-
-protected:  // 控件条嵌入成员
-	CStatusBar        m_wndStatusBar;
 
 // 生成的消息映射函数
 protected:

@@ -1,7 +1,6 @@
 ﻿
 // MainFrm.h: CMainFrame 类的接口
 //
-
 #pragma once
 
 class CMainFrame : public CFrameWnd
@@ -10,6 +9,7 @@ class CMainFrame : public CFrameWnd
 protected: // 仅从序列化创建
 	CMainFrame() noexcept;
 	DECLARE_DYNCREATE(CMainFrame)
+	//CSplitterWnd m_wndSplitter;
 
 // 特性
 public:
@@ -20,7 +20,7 @@ public:
 // 重写
 public:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-
+	//virtual BOOL OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext);
 // 实现
 public:
 	virtual ~CMainFrame();
@@ -29,8 +29,6 @@ public:
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 
-protected:  // 控件条嵌入成员
-	CStatusBar        m_wndStatusBar;
 
 // 生成的消息映射函数
 protected:

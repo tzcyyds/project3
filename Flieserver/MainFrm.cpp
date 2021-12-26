@@ -7,10 +7,14 @@
 #include "Flieserver.h"
 
 #include "MainFrm.h"
+#include "CDisplayView.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+
 
 // CMainFrame
 
@@ -44,13 +48,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
-	if (!m_wndStatusBar.Create(this))
-	{
-		TRACE0("未能创建状态栏\n");
-		return -1;      // 未能创建
-	}
-	m_wndStatusBar.SetIndicators(indicators, sizeof(indicators)/sizeof(UINT));
-
 	return 0;
 }
 
@@ -60,7 +57,8 @@ BOOL CMainFrame::PreCreateWindow(CREATESTRUCT& cs)
 		return FALSE;
 	// TODO: 在此处通过修改
 	//  CREATESTRUCT cs 来修改窗口类或样式
-
+	cs.cx = 900;
+	cs.cy = 750;
 	return TRUE;
 }
 
@@ -80,4 +78,6 @@ void CMainFrame::Dump(CDumpContext& dc) const
 
 
 // CMainFrame 消息处理程序
+
+
 

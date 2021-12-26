@@ -4,7 +4,7 @@
 
 
 #pragma once
-
+#include "CDisplayView.h"
 
 class CClientDoc : public CDocument
 {
@@ -30,12 +30,23 @@ public:
 // 实现
 public:
 	virtual ~CClientDoc();
+
+	void socket_state1_fsm(SOCKET s);
+	void socket_state2_fsm(SOCKET s);
+	void socket_state3_fsm(SOCKET s);
+	void socket_state4_fsm(SOCKET s);
+	void socket_state5_fsm(SOCKET s);
+	void socket_state6_fsm(SOCKET s);
+	void socket_state7_fsm(SOCKET s);
+	BOOL UploadOnce(const char* buf, u_int length);
+	BOOL RecvOnce(char* buf, u_int length);
+
+protected:
+	CDisplayView* pView;
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
 #endif
-
-protected:
 
 // 生成的消息映射函数
 protected:

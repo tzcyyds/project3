@@ -10,7 +10,7 @@
 #include "MainFrm.h"
 
 #include "FlieserverDoc.h"
-#include "FlieserverView.h"
+#include "CDisplayView.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -20,7 +20,6 @@
 // CFlieserverApp
 
 BEGIN_MESSAGE_MAP(CFlieserverApp, CWinApp)
-	ON_COMMAND(ID_APP_ABOUT, &CFlieserverApp::OnAppAbout)
 	// 基于文件的标准文档命令
 	ON_COMMAND(ID_FILE_NEW, &CWinApp::OnFileNew)
 	ON_COMMAND(ID_FILE_OPEN, &CWinApp::OnFileOpen)
@@ -35,7 +34,6 @@ CFlieserverApp::CFlieserverApp() noexcept
 	// TODO: 将以下应用程序 ID 字符串替换为唯一的 ID 字符串；建议的字符串格式
 	//为 CompanyName.ProductName.SubProduct.VersionInformation
 	SetAppID(_T("Flieserver.AppID.NoVersion"));
-
 	// TODO:  在此处添加构造代码，
 	// 将所有重要的初始化放置在 InitInstance 中
 }
@@ -61,11 +59,11 @@ BOOL CFlieserverApp::InitInstance()
 
 	CWinApp::InitInstance();
 
-	if (!AfxSocketInit())
-	{
-		AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
-		return FALSE;
-	}
+	//if (!AfxSocketInit())
+	//{
+	//	AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
+	//	return FALSE;
+	//}
 
 	EnableTaskbarInteraction(FALSE);
 
@@ -90,7 +88,7 @@ BOOL CFlieserverApp::InitInstance()
 		IDR_MAINFRAME,
 		RUNTIME_CLASS(CFlieserverDoc),
 		RUNTIME_CLASS(CMainFrame),       // 主 SDI 框架窗口
-		RUNTIME_CLASS(CFlieserverView));
+		RUNTIME_CLASS(CDisplayView));
 	if (!pDocTemplate)
 		return FALSE;
 	AddDocTemplate(pDocTemplate);
@@ -107,6 +105,7 @@ BOOL CFlieserverApp::InitInstance()
 	if (!ProcessShellCommand(cmdInfo))
 		return FALSE;
 
+
 	// 唯一的一个窗口已初始化，因此显示它并对其进行更新
 	m_pMainWnd->ShowWindow(SW_SHOW);
 	m_pMainWnd->UpdateWindow();
@@ -114,48 +113,4 @@ BOOL CFlieserverApp::InitInstance()
 }
 
 // CFlieserverApp 消息处理程序
-
-
-// 用于应用程序“关于”菜单项的 CAboutDlg 对话框
-
-class CAboutDlg : public CDialogEx
-{
-public:
-	CAboutDlg() noexcept;
-
-// 对话框数据
-#ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_ABOUTBOX };
-#endif
-
-protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
-
-// 实现
-protected:
-	DECLARE_MESSAGE_MAP()
-};
-
-CAboutDlg::CAboutDlg() noexcept : CDialogEx(IDD_ABOUTBOX)
-{
-}
-
-void CAboutDlg::DoDataExchange(CDataExchange* pDX)
-{
-	CDialogEx::DoDataExchange(pDX);
-}
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
-END_MESSAGE_MAP()
-
-// 用于运行对话框的应用程序命令
-void CFlieserverApp::OnAppAbout()
-{
-	CAboutDlg aboutDlg;
-	aboutDlg.DoModal();
-}
-
-// CFlieserverApp 消息处理程序
-
-
 
