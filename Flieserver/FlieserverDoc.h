@@ -48,7 +48,7 @@ public:
 public:
 	UserDoc m_UserInfo;//本地用户信息 string-string,用户名-密码
 	LinkInfo m_linkInfo;//IP地址，端口号等，<SOCKET, User>
-	std::unordered_map<SOCKET, std::string> m_Comparison;//保存客户端应该返回的质询结果，socket-string，socket-应该返回的质询结果
+	std::map<SOCKET, std::string> m_Comparison;//保存客户端应该返回的质询结果，socket-string，socket-应该返回的质询结果
 
 // 生成的消息映射函数
 protected:

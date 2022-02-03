@@ -10,6 +10,7 @@
 #define IDC_LISTEN                      1002
 #define IDC_STOP                        1003
 #define IDC_BUTTON3                     1010
+#define IDC_MANAGE                      1010
 #define IDC_USEROL                      1011
 
 // Next default values for new objects

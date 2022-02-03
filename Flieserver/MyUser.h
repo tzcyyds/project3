@@ -2,6 +2,7 @@
 #include "pch.h"
 
 
+
 class User
 {
 public:
@@ -32,7 +33,7 @@ public:
 	~UserDoc();
 
 public:
-	std::unordered_map<std::string, std::string> UserDocMap;
+	std::map<std::string, std::string> UserDocMap;
 	void writeP();
 	void initDoc();
 
@@ -42,8 +43,8 @@ class LinkInfo
 {
 public:
 	~LinkInfo();
-	std::unordered_map<SOCKET, User*> SUMap;
-	std::unordered_map<SOCKET, Fileinfo*> SFMap;
+	std::map<SOCKET, User*> SUMap;
+	std::map<SOCKET, Fileinfo*> SFMap;
 };
 
 
